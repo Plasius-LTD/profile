@@ -31,9 +31,9 @@
   },
   "dependencies": {
     "@plasius/auth": "^1.0.0",
-    "@plasius/entity-manager": "^1.0.4",
+    "@plasius/entity-manager": "^1.0.5",
     "@plasius/environment": "^1.0.3",
-    "@plasius/react-query": "^1.0.3",
+    "@plasius/react-query": "^1.0.4",
     "@plasius/react-state": "^1.2.1",
     "@plasius/schema": "^1.2.1",
     "@plasius/translations": "^1.0.8"
