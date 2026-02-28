@@ -1,6 +1,6 @@
 {
   "name": "@plasius/profile",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "main": "./dist-cjs/index.js",
   "types": "./dist/index.d.ts",
   "private": false,
@@ -32,13 +32,13 @@
     "react": "^19.1.0"
   },
   "dependencies": {
-    "@plasius/auth": "^1.0.2",
-    "@plasius/entity-manager": "^1.0.5",
-    "@plasius/environment": "^1.0.3",
-    "@plasius/react-query": "^1.0.6",
-    "@plasius/react-state": "^1.2.1",
-    "@plasius/schema": "^1.2.1",
-    "@plasius/translations": "^1.0.8"
+    "@plasius/auth": "^1.0.4",
+    "@plasius/entity-manager": "^1.0.6",
+    "@plasius/environment": "^1.0.5",
+    "@plasius/react-query": "^1.0.7",
+    "@plasius/react-state": "^1.2.2",
+    "@plasius/schema": "^1.2.2",
+    "@plasius/translations": "^1.0.9"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.0",
