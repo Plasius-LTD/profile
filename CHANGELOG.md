@@ -9,30 +9,33 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added explicit `@testing-library/dom` dev dependency for CI/runtime parity with `@testing-library/react`.
 
 - **Changed**
-  - (placeholder)
+  - Hardened CI compatibility for the new provider test suite by removing stale type-only imports and aligning test runtime dependencies.
 
 - **Fixed**
-  - (placeholder)
+  - Fixed CI failures on `main` caused by missing test runtime peer resolution (`@testing-library/dom`) and lint failures in new tests.
 
 - **Security**
-  - (placeholder)
+  - No security-impacting changes in unreleased scope.
 
 ## [1.0.13] - 2026-03-04
 
 - **Added**
-  - (placeholder)
+  - Added reducer/helper logic tests for `UserProvider` and `SettingsProvider`.
+  - Added component-level provider initialization tests using `jsdom`.
+  - Exported reusable provider logic primitives (`userReducer`, `settingsReducer`, load/persist helpers) for deterministic testing.
 
 - **Changed**
-  - (placeholder)
+  - Restored CI line-coverage gate to `>= 80%`.
+  - Restored Vitest thresholds to `>= 80%` across lines/functions/statements/branches.
 
 - **Fixed**
-  - (placeholder)
+  - Replaced unstable provider behavior tests with deterministic logic-first tests to eliminate timing-dependent failures.
 
 - **Security**
-  - (placeholder)
+  - Added repository-wide private certificate-key ignore rules and removed tracked localhost private-key material.
 
 ## [1.0.9] - 2026-03-01
 

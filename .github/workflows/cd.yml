@@ -98,7 +98,7 @@ jobs:
           fi
           
       - name: Install deps (CI)
-        run: npm install --no-fund --no-audit --legacy-peer-deps
+        run: npm ci --no-fund --no-audit --no-progress
 
       - name: Test (coverage)
         run: npm run test -- --coverage
