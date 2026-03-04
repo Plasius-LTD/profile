@@ -21,7 +21,6 @@ import {
   saveUserProfile,
   userReducer,
   type UserAction,
-  type UserState,
 } from "../src/UserProvider.js";
 
 const VALID_USER_ID = "123456789012345678901";
