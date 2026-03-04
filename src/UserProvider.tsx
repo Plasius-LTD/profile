@@ -14,12 +14,12 @@ export function ValidateUser(user: UserEntity) {
   return validated.value as unknown as UserEntity;
 }
 
-interface UserState extends IState {
+export interface UserState extends IState {
   user?: UserEntity;
   userId: string | null;
 }
 
-type UserAction =
+export type UserAction =
   | { type: "setUser"; user: UserEntity }
   | { type: "setUserId"; userId: string | null }
   | { type: "updateUser"; user: Partial<UserEntity> }
@@ -27,7 +27,7 @@ type UserAction =
   | { type: "updateNameField"; payload: { field: string; value: unknown } }
   | { type: "updateAvatarField"; payload: { field: string; value: unknown } };
 
-const reducer = (state: UserState, action: UserAction): UserState => {
+export const userReducer = (state: UserState, action: UserAction): UserState => {
   switch (action.type) {
     case "setUser":
       return { ...state, user: action.user };
@@ -80,12 +80,96 @@ const reducer = (state: UserState, action: UserAction): UserState => {
   }
 };
 
-const initialState: UserState = {
+export const initialUserState: UserState = {
   user: undefined,
   userId: null,
 };
 
-export const UserStore = createScopedStoreContext(reducer, initialState);
+export const UserStore = createScopedStoreContext(userReducer, initialUserState);
+
+type AuthorizedFetch = (
+  input: string,
+  init?: {
+    credentials?: "include" | "omit" | "same-origin";
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+}>;
+
+type UserLogger = Pick<Console, "info" | "warn" | "error">;
+
+export async function saveUserProfile(
+  user: UserEntity | undefined,
+  authorizedFetch: AuthorizedFetch,
+  logger: UserLogger = console
+): Promise<void> {
+  if (!user) return;
+
+  try {
+    const validatedUser = ValidateUser(user);
+    const res = await authorizedFetch(
+      `/users/${validatedUser.partitionKey}/update`,
+      {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(validatedUser),
+      }
+    );
+    if (!res.ok) {
+      throw new Error(`Save failed with status ${res.status}`);
+    }
+    logger.info("✅ User profile saved successfully.");
+  } catch (err) {
+    logger.error("❌ Error saving user profile:", err);
+  }
+}
+
+export async function loadOrCreateUserProfile(
+  userId: string,
+  authorizedFetch: AuthorizedFetch,
+  dispatch: (action: UserAction) => void,
+  logger: UserLogger = console
+): Promise<void> {
+  if (!validateUserId(userId)) return;
+
+  const headers = { "Content-Type": "application/json" };
+
+  try {
+    const res = await authorizedFetch(`/users/${userId}/get`, {
+      credentials: "include",
+    });
+
+    if (res.status === 404) {
+      const newUser: Partial<UserEntity> = { id: userId };
+      const createRes = await authorizedFetch(`/users/${userId}/create`, {
+        credentials: "include",
+        method: "POST",
+        headers,
+        body: JSON.stringify(newUser),
+      });
+      if (!createRes.ok) throw new Error(`Failed to load user (${createRes.status})`);
+      const createdData: unknown = await createRes.json();
+      const validatedCreatedUser = ValidateUser(createdData as UserEntity);
+      dispatch({ type: "setUser", user: validatedCreatedUser });
+      return;
+    }
+
+    if (!res.ok) throw new Error(`Failed to load user (${res.status})`);
+    const data: unknown = await res.json();
+    const validatedUser = ValidateUser(data as UserEntity);
+    dispatch({ type: "setUser", user: validatedUser });
+  } catch (err) {
+    logger.warn("⚠️ Failed to load or create user profile:", err);
+  }
+}
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -102,62 +186,16 @@ const UserInitializer = () => {
   const { userId, user } = UserStore.useStore();
 
   const saveUser = useCallback(async () => {
-    if (!user) return;
-    try {
-      const validatedUser = ValidateUser(user);
-      const res = await authorizedFetch(
-        `/users/${validatedUser.partitionKey}/update`,
-        {
-          credentials: "include",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(validatedUser),
-        }
-      );
-      if (!res.ok) {
-        throw new Error(`Save failed with status ${res.status}`);
-      }
-      console.info("✅ User profile saved successfully.");
-    } catch (err) {
-      console.error("❌ Error saving user profile:", err);
-    }
+    await saveUserProfile(user, authorizedFetch);
   }, [authorizedFetch, user]);
 
   useEffect(() => {
-    if (!userId || !validateUserId(userId)) return;
+    if (!userId) return;
 
-    const headers = { "Content-Type": "application/json" };
-
-    authorizedFetch(`/users/${userId}/get`, { credentials: "include" })
-      .then(async (res) => {
-        if (res.status === 404) {
-          const newUser: Partial<UserEntity> = { id: userId };
-          return await authorizedFetch(`/users/${userId}/create`, {
-            credentials: "include",
-            method: "POST",
-            headers,
-            body: JSON.stringify(newUser),
-          }).then(async (res) => {
-            if (!res.ok) throw new Error(`Failed to load user (${res.status})`);
-            const data: unknown = await res.json();
-            const validatedUser = ValidateUser(data as UserEntity);
-            dispatch({ type: "setUser", user: validatedUser });
-          });
-        }
-
-        if (!res.ok) throw new Error(`Failed to load user (${res.status})`);
-        const data: unknown = await res.json();
-        const validatedUser = ValidateUser(data as UserEntity);
-        dispatch({ type: "setUser", user: validatedUser });
-      })
-      .catch((err) => {
-        console.warn("⚠️ Failed to load or create user profile:", err);
-      });
+    void loadOrCreateUserProfile(userId, authorizedFetch, dispatch);
 
     return () => {
-      saveUser().catch((err) => {
+      saveUser().catch((err: unknown) => {
         console.error("❌ Error saving during cleanup:", err);
       });
     };

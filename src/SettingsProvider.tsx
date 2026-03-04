@@ -16,7 +16,7 @@ export type SettingsAction =
 
 const initialState: SettingsState = {};
 
-const reducer = (
+export const settingsReducer = (
   state: SettingsState,
   action: SettingsAction
 ): SettingsState => {
@@ -35,7 +35,75 @@ const reducer = (
 export const SettingsStore = createScopedStoreContext<
   SettingsState,
   SettingsAction
->(reducer, initialState);
+>(settingsReducer, initialState);
+
+type AuthorizedFetch = (
+  input: string,
+  init?: {
+    credentials?: "include" | "omit" | "same-origin";
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  }
+) => Promise<{
+  ok: boolean;
+  status: number;
+  json: () => Promise<unknown>;
+}>;
+
+type HiddenSettingsKeys = {
+  [K in typeof PRIVATE_ID | typeof PRIVATE_PARTITION_KEY]?: string;
+};
+
+export function toSettingsEntity(state: SettingsState): SettingsEntity {
+  const hidden = state as SettingsState & HiddenSettingsKeys;
+  return {
+    id: hidden[PRIVATE_ID] ?? "",
+    partitionKey: hidden[PRIVATE_PARTITION_KEY] ?? "",
+    settings: state,
+  } as unknown as SettingsEntity;
+}
+
+export function fromSettingsEntity(entity: SettingsEntity): Partial<SettingsState> {
+  const result: Partial<SettingsState> = {
+    ...(entity.settings as Record<string, unknown>),
+  };
+  Object.defineProperty(result, PRIVATE_ID, {
+    value: entity.id,
+    enumerable: false,
+    writable: false,
+  });
+  Object.defineProperty(result, PRIVATE_PARTITION_KEY, {
+    value: entity.partitionKey,
+    enumerable: false,
+    writable: false,
+  });
+  return result;
+}
+
+export async function loadSettingsEntity(
+  authorizedFetch: AuthorizedFetch,
+  configUrl: string
+): Promise<SettingsEntity> {
+  const res = await authorizedFetch(configUrl);
+  if (!res.ok) throw new Error(`Load failed with status ${res.status}`);
+  return (await res.json()) as SettingsEntity;
+}
+
+export async function persistSettingsEntity(
+  authorizedFetch: AuthorizedFetch,
+  configUrl: string,
+  state: SettingsState
+): Promise<void> {
+  const res = await authorizedFetch(configUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(toSettingsEntity(state)),
+  });
+  if (!res.ok) throw new Error(`Save failed with status ${res.status}`);
+}
 
 export const SettingsProvider = ({
   children,
@@ -63,44 +131,9 @@ const SettingsInitializer = ({
   const state = SettingsStore.useStore();
   const queryClient = useQueryClient();
 
-  type HiddenSettingsKeys = {
-    [K in typeof PRIVATE_ID | typeof PRIVATE_PARTITION_KEY]?: string;
-  };
-  const toSettingsEntity = (state: SettingsState): SettingsEntity => {
-    const hidden = state as SettingsState & HiddenSettingsKeys;
-    return {
-      id: hidden[PRIVATE_ID] ?? "",
-      partitionKey: hidden[PRIVATE_PARTITION_KEY] ?? "",
-      settings: state,
-    } as unknown as SettingsEntity;
-  };
-
-  const fromSettingsEntity = (
-    entity: SettingsEntity
-  ): Partial<SettingsState> => {
-    const result: Partial<SettingsState> = {
-      ...(entity.settings as Record<string, unknown>),
-    };
-    Object.defineProperty(result, PRIVATE_ID, {
-      value: entity.id,
-      enumerable: false,
-      writable: false,
-    });
-    Object.defineProperty(result, PRIVATE_PARTITION_KEY, {
-      value: entity.partitionKey,
-      enumerable: false,
-      writable: false,
-    });
-    return result;
-  };
-
   const { data } = useQuery<SettingsEntity>(
     "settings",
-    async (): Promise<SettingsEntity> => {
-      const res = await authorizedFetch(configUrl);
-      if (!res.ok) throw new Error(`Load failed with status ${res.status}`);
-      return (await res.json()) as SettingsEntity;
-    }
+    async (): Promise<SettingsEntity> => loadSettingsEntity(authorizedFetch, configUrl)
   );
 
   useEffect(() => {
@@ -110,24 +143,12 @@ const SettingsInitializer = ({
   }, [data]);
 
   const saveMutation = useMutation(
-    async () => {
-      const res = await authorizedFetch(configUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(toSettingsEntity(state)),
-      });
-      if (!res.ok) throw new Error(`Save failed with status ${res.status}`);
-    },
+    async () => persistSettingsEntity(authorizedFetch, configUrl, state),
     {
       onSuccess: () => {
         console.info("✅ Settings saved successfully.");
         queryClient.invalidateQuery("settings", async () => {
-          const res = await authorizedFetch(configUrl);
-          if (!res.ok) throw new Error(`Load failed with status ${res.status}`);
-          const entity = (await res.json()) as SettingsEntity;
-          return entity;
+          return loadSettingsEntity(authorizedFetch, configUrl);
         });
       },
       onError: (err: unknown) => {
