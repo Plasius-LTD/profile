@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.14] - 2026-03-04
+
+- **Added**
   - Added explicit `@testing-library/dom` dev dependency for CI/runtime parity with `@testing-library/react`.
 
 - **Changed**
@@ -136,7 +150,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.13...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.14...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -158,3 +172,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.8]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.8
 [1.0.9]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.9
 [1.0.13]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.13
+[1.0.14]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.14
