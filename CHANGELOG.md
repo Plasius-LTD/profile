@@ -15,6 +15,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.15] - 2026-03-09
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
   - Fixed `UserProvider` profile saves to target `/users/{user.id}/update` instead of the entity partition key, preventing invalid `/users/undefined/update` and cross-tenant route construction.
 
 - **Security**
@@ -150,7 +164,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.14...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.15...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -173,3 +187,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.9]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.9
 [1.0.13]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.13
 [1.0.14]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.14
+[1.0.15]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.15
