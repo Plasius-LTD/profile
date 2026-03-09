@@ -29,6 +29,8 @@ When CJS output is emitted under `dist-cjs/*.js` with `type: module`, `dist-cjs/
 import { UserProvider, SettingsProvider } from "@plasius/profile";
 ```
 
+`UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
+
 ## Development
 
 ```bash

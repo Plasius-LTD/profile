@@ -15,7 +15,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Fixed `UserProvider` profile saves to target `/users/{user.id}/update` instead of the entity partition key, preventing invalid `/users/undefined/update` and cross-tenant route construction.
 
 - **Security**
   - (placeholder)

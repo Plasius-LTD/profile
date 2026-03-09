@@ -24,11 +24,12 @@ import {
 } from "../src/UserProvider.js";
 
 const VALID_USER_ID = "123456789012345678901";
+const VALID_PARTITION_KEY = "tenant-001";
 
 function createValidUser(overrides: Partial<UserEntity> = {}): UserEntity {
   return {
-    partitionKey: VALID_USER_ID,
-    id: "row-001",
+    partitionKey: VALID_PARTITION_KEY,
+    id: VALID_USER_ID,
     version: "1.0.0",
     entityType: "userEntity",
     createdAt: new Date().toISOString(),
@@ -68,7 +69,9 @@ function okJson(payload: unknown): {
 
 describe("UserProvider logic", () => {
   it("validates user payloads", () => {
-    expect(() => ValidateUser(createValidUser())).not.toThrow();
+    const validated = ValidateUser(createValidUser());
+    expect(validated.id).toBe(VALID_USER_ID);
+    expect(validated.partitionKey).toBe(VALID_PARTITION_KEY);
     expect(() => ValidateUser({} as UserEntity)).toThrow("Invalid User Profile");
   });
 
@@ -125,12 +128,29 @@ describe("UserProvider logic", () => {
     await saveUserProfile(createValidUser(), fetchMock, logger);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/users\/.*\/update$/);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`/users/${VALID_USER_ID}/update`);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       method: "POST",
       credentials: "include",
     });
     expect(logger.info).toHaveBeenCalledWith("✅ User profile saved successfully.");
+  });
+
+  it("rejects saves when the user id is invalid", async () => {
+    const fetchMock = vi.fn();
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    await saveUserProfile(createValidUser({ id: "" }), fetchMock, logger);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "❌ Error saving user profile:",
+      expect.any(Error)
+    );
   });
 
   it("handles save failures without throwing", async () => {

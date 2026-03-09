@@ -11,7 +11,10 @@ export function ValidateUser(user: UserEntity) {
       `Invalid User Profile: ${validated.errors?.join(", ") ?? "unknown error"}`
     );
   }
-  return validated.value as unknown as UserEntity;
+  return {
+    ...user,
+    ...(validated.value as Partial<UserEntity>),
+  } as UserEntity;
 }
 
 export interface UserState extends IState {
@@ -112,8 +115,12 @@ export async function saveUserProfile(
 
   try {
     const validatedUser = ValidateUser(user);
+    const targetUserId = typeof validatedUser.id === "string" ? validatedUser.id : "";
+    if (!validateUserId(targetUserId)) {
+      throw new Error("Invalid user id for save.");
+    }
     const res = await authorizedFetch(
-      `/users/${validatedUser.partitionKey}/update`,
+      `/users/${targetUserId}/update`,
       {
         credentials: "include",
         method: "POST",
