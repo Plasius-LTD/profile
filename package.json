@@ -38,7 +38,7 @@
     "@plasius/environment": "^1.0.10",
     "@plasius/react-query": "^1.0.12",
     "@plasius/react-state": "^1.2.5",
-    "@plasius/schema": "^1.2.4",
+    "@plasius/schema": "^1.2.6",
     "@plasius/translations": "^1.0.11"
   },
   "devDependencies": {
