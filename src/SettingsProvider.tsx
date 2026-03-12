@@ -1,6 +1,6 @@
 const PRIVATE_ID = Symbol("settings.id");
 const PRIVATE_PARTITION_KEY = Symbol("settings.partitionKey");
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { createScopedStoreContext } from "@plasius/react-state";
 import type { IState } from "@plasius/react-state";
 import { useAuthorizedFetch } from "@plasius/auth";
@@ -51,6 +51,51 @@ type AuthorizedFetch = (
   json: () => Promise<unknown>;
 }>;
 
+export interface SettingsDataClient {
+  load(configUrl: string): Promise<SettingsEntity>;
+  save(configUrl: string, state: SettingsState): Promise<void>;
+}
+
+function isSettingsDataClient(
+  clientOrFetch: AuthorizedFetch | SettingsDataClient,
+): clientOrFetch is SettingsDataClient {
+  return typeof clientOrFetch === "object" && clientOrFetch !== null;
+}
+
+export function createHttpSettingsDataClient(
+  authorizedFetch: AuthorizedFetch,
+): SettingsDataClient {
+  return {
+    load: async (configUrl: string): Promise<SettingsEntity> => {
+      const response = await authorizedFetch(configUrl);
+      if (!response.ok) {
+        throw new Error(`Load failed with status ${response.status}`);
+      }
+      return (await response.json()) as SettingsEntity;
+    },
+    save: async (configUrl: string, state: SettingsState): Promise<void> => {
+      const response = await authorizedFetch(configUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(toSettingsEntity(state)),
+      });
+      if (!response.ok) {
+        throw new Error(`Save failed with status ${response.status}`);
+      }
+    },
+  };
+}
+
+function resolveSettingsDataClient(
+  clientOrFetch: AuthorizedFetch | SettingsDataClient,
+): SettingsDataClient {
+  return isSettingsDataClient(clientOrFetch)
+    ? clientOrFetch
+    : createHttpSettingsDataClient(clientOrFetch);
+}
+
 type HiddenSettingsKeys = {
   [K in typeof PRIVATE_ID | typeof PRIVATE_PARTITION_KEY]?: string;
 };
@@ -82,39 +127,38 @@ export function fromSettingsEntity(entity: SettingsEntity): Partial<SettingsStat
 }
 
 export async function loadSettingsEntity(
-  authorizedFetch: AuthorizedFetch,
+  clientOrFetch: AuthorizedFetch | SettingsDataClient,
   configUrl: string
 ): Promise<SettingsEntity> {
-  const res = await authorizedFetch(configUrl);
-  if (!res.ok) throw new Error(`Load failed with status ${res.status}`);
-  return (await res.json()) as SettingsEntity;
+  const client = resolveSettingsDataClient(clientOrFetch);
+  return client.load(configUrl);
 }
 
 export async function persistSettingsEntity(
-  authorizedFetch: AuthorizedFetch,
+  clientOrFetch: AuthorizedFetch | SettingsDataClient,
   configUrl: string,
   state: SettingsState
 ): Promise<void> {
-  const res = await authorizedFetch(configUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(toSettingsEntity(state)),
-  });
-  if (!res.ok) throw new Error(`Save failed with status ${res.status}`);
+  const client = resolveSettingsDataClient(clientOrFetch);
+  await client.save(configUrl, state);
+}
+
+export interface SettingsProviderProps {
+  children: React.ReactNode;
+  configUrl?: string;
+  client?: SettingsDataClient;
 }
 
 export const SettingsProvider = ({
   children,
   configUrl = "/settings",
-}: {
-  children: React.ReactNode;
-  configUrl?: string;
-}) => {
+  client,
+}: SettingsProviderProps) => {
   return (
     <SettingsStore.Provider>
-      <SettingsInitializer configUrl={configUrl}>{children}</SettingsInitializer>
+      <SettingsInitializer configUrl={configUrl} client={client}>
+        {children}
+      </SettingsInitializer>
     </SettingsStore.Provider>
   );
 };
@@ -122,33 +166,39 @@ export const SettingsProvider = ({
 const SettingsInitializer = ({
   children,
   configUrl,
+  client,
 }: {
   children: React.ReactNode;
   configUrl: string;
+  client?: SettingsDataClient;
 }) => {
   const authorizedFetch = useAuthorizedFetch();
   const dispatch = SettingsStore.useDispatch();
   const state = SettingsStore.useStore();
   const queryClient = useQueryClient();
+  const settingsClient = useMemo(
+    () => client ?? createHttpSettingsDataClient(authorizedFetch),
+    [authorizedFetch, client],
+  );
 
   const { data } = useQuery<SettingsEntity>(
     "settings",
-    async (): Promise<SettingsEntity> => loadSettingsEntity(authorizedFetch, configUrl)
+    async (): Promise<SettingsEntity> => loadSettingsEntity(settingsClient, configUrl)
   );
 
   useEffect(() => {
     if (data) {
       dispatch({ type: "load", payload: fromSettingsEntity(data) });
     }
-  }, [data]);
+  }, [data, dispatch]);
 
   const saveMutation = useMutation(
-    async () => persistSettingsEntity(authorizedFetch, configUrl, state),
+    async () => persistSettingsEntity(settingsClient, configUrl, state),
     {
       onSuccess: () => {
         console.info("✅ Settings saved successfully.");
         queryClient.invalidateQuery("settings", async () => {
-          return loadSettingsEntity(authorizedFetch, configUrl);
+          return loadSettingsEntity(settingsClient, configUrl);
         });
       },
       onError: (err: unknown) => {

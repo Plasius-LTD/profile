@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { type UserAvatarEntity, type UserEntity, userEntitySchema } from "@plasius/entity-manager";
 import { validateUserId } from "@plasius/schema";
 import { useAuthorizedFetch } from "@plasius/auth";
@@ -106,9 +106,78 @@ type AuthorizedFetch = (
 
 type UserLogger = Pick<Console, "info" | "warn" | "error">;
 
+export interface UserProfileClient {
+  load(userId: string): Promise<UserEntity | null>;
+  create(userId: string): Promise<UserEntity>;
+  save(user: UserEntity): Promise<void>;
+}
+
+function isUserProfileClient(
+  clientOrFetch: AuthorizedFetch | UserProfileClient,
+): clientOrFetch is UserProfileClient {
+  return typeof clientOrFetch === "object" && clientOrFetch !== null;
+}
+
+export function createHttpUserProfileClient(
+  authorizedFetch: AuthorizedFetch,
+): UserProfileClient {
+  return {
+    load: async (userId: string): Promise<UserEntity | null> => {
+      const response = await authorizedFetch(`/users/${userId}/get`, {
+        credentials: "include",
+      });
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`Failed to load user (${response.status})`);
+      }
+
+      return (await response.json()) as UserEntity;
+    },
+    create: async (userId: string): Promise<UserEntity> => {
+      const response = await authorizedFetch(`/users/${userId}/create`, {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: userId } satisfies Partial<UserEntity>),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to load user (${response.status})`);
+      }
+
+      return (await response.json()) as UserEntity;
+    },
+    save: async (user: UserEntity): Promise<void> => {
+      const targetUserId = typeof user.id === "string" ? user.id : "";
+      const response = await authorizedFetch(`/users/${targetUserId}/update`, {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(user),
+      });
+      if (!response.ok) {
+        throw new Error(`Save failed with status ${response.status}`);
+      }
+    },
+  };
+}
+
+function resolveUserProfileClient(
+  clientOrFetch: AuthorizedFetch | UserProfileClient,
+): UserProfileClient {
+  return isUserProfileClient(clientOrFetch)
+    ? clientOrFetch
+    : createHttpUserProfileClient(clientOrFetch);
+}
+
 export async function saveUserProfile(
   user: UserEntity | undefined,
-  authorizedFetch: AuthorizedFetch,
+  clientOrFetch: AuthorizedFetch | UserProfileClient,
   logger: UserLogger = console
 ): Promise<void> {
   if (!user) return;
@@ -119,20 +188,8 @@ export async function saveUserProfile(
     if (!validateUserId(targetUserId)) {
       throw new Error("Invalid user id for save.");
     }
-    const res = await authorizedFetch(
-      `/users/${targetUserId}/update`,
-      {
-        credentials: "include",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(validatedUser),
-      }
-    );
-    if (!res.ok) {
-      throw new Error(`Save failed with status ${res.status}`);
-    }
+    const client = resolveUserProfileClient(clientOrFetch);
+    await client.save(validatedUser);
     logger.info("✅ User profile saved successfully.");
   } catch (err) {
     logger.error("❌ Error saving user profile:", err);
@@ -141,72 +198,69 @@ export async function saveUserProfile(
 
 export async function loadOrCreateUserProfile(
   userId: string,
-  authorizedFetch: AuthorizedFetch,
+  clientOrFetch: AuthorizedFetch | UserProfileClient,
   dispatch: (action: UserAction) => void,
   logger: UserLogger = console
 ): Promise<void> {
   if (!validateUserId(userId)) return;
 
-  const headers = { "Content-Type": "application/json" };
+  const client = resolveUserProfileClient(clientOrFetch);
 
   try {
-    const res = await authorizedFetch(`/users/${userId}/get`, {
-      credentials: "include",
-    });
+    const loadedUser = await client.load(userId);
 
-    if (res.status === 404) {
-      const newUser: Partial<UserEntity> = { id: userId };
-      const createRes = await authorizedFetch(`/users/${userId}/create`, {
-        credentials: "include",
-        method: "POST",
-        headers,
-        body: JSON.stringify(newUser),
-      });
-      if (!createRes.ok) throw new Error(`Failed to load user (${createRes.status})`);
-      const createdData: unknown = await createRes.json();
+    if (!loadedUser) {
+      const createdData = await client.create(userId);
       const validatedCreatedUser = ValidateUser(createdData as UserEntity);
       dispatch({ type: "setUser", user: validatedCreatedUser });
       return;
     }
 
-    if (!res.ok) throw new Error(`Failed to load user (${res.status})`);
-    const data: unknown = await res.json();
-    const validatedUser = ValidateUser(data as UserEntity);
+    const validatedUser = ValidateUser(loadedUser as UserEntity);
     dispatch({ type: "setUser", user: validatedUser });
   } catch (err) {
     logger.warn("⚠️ Failed to load or create user profile:", err);
   }
 }
 
-export const UserProvider = ({ children }: { children: React.ReactNode }) => {
+export interface UserProviderProps {
+  children: React.ReactNode;
+  client?: UserProfileClient;
+}
+
+export const UserProvider = ({ children, client }: UserProviderProps) => {
   return (
     <UserStore.Provider>
-      <UserInitializer />
+      <UserInitializer client={client} />
       {children}
     </UserStore.Provider>
   );
 };
 
-const UserInitializer = () => {
+const UserInitializer = ({ client }: { client?: UserProfileClient }) => {
   const authorizedFetch = useAuthorizedFetch();
   const dispatch = UserStore.useDispatch();
   const { userId, user } = UserStore.useStore();
+  const userProfileClient = useMemo(
+    () => client ?? createHttpUserProfileClient(authorizedFetch),
+    [authorizedFetch, client],
+  );
 
   const saveUser = useCallback(async () => {
-    await saveUserProfile(user, authorizedFetch);
-  }, [authorizedFetch, user]);
+    await saveUserProfile(user, userProfileClient);
+  }, [user, userProfileClient]);
 
   useEffect(() => {
     if (!userId) return;
 
-    void loadOrCreateUserProfile(userId, authorizedFetch, dispatch);
+    void loadOrCreateUserProfile(userId, userProfileClient, dispatch);
 
     return () => {
       saveUser().catch((err: unknown) => {
         console.error("❌ Error saving during cleanup:", err);
       });
     };
-  }, [userId, authorizedFetch, dispatch, saveUser]);
+  }, [userId, userProfileClient, dispatch, saveUser]);
 
   return null;
 };

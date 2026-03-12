@@ -152,4 +152,49 @@ describe("SettingsProvider component behavior", () => {
       );
     });
   });
+
+  it("uses an injected settings client without calling the auth fetch hook", async () => {
+    const client = {
+      load: vi.fn().mockResolvedValue({
+        id: "settings-4",
+        partitionKey: "123456789012345678901",
+        settings: { theme: "dark" },
+      }),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    useQueryMock.mockImplementation(
+      (_key: unknown, fetcher: () => Promise<unknown>) => {
+        void fetcher();
+        return { data: undefined };
+      }
+    );
+    useMutationMock.mockImplementation(
+      (mutateFn: () => Promise<unknown>, options?: { onSuccess?: () => void; onError?: (error: unknown) => void }) => ({
+        mutate: async () => {
+          try {
+            await mutateFn();
+            options?.onSuccess?.();
+          } catch (error) {
+            options?.onError?.(error);
+          }
+        },
+      })
+    );
+
+    const { unmount } = render(
+      <SettingsProvider configUrl="/settings/config" client={client}>
+        <div>child</div>
+      </SettingsProvider>
+    );
+
+    unmount();
+
+    await waitFor(() => {
+      expect(client.load).toHaveBeenCalledWith("/settings/config");
+      expect(client.save).toHaveBeenCalledWith("/settings/config", expect.any(Object));
+    });
+
+    expect(authorizedFetchMock).not.toHaveBeenCalled();
+  });
 });

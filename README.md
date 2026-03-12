@@ -31,6 +31,36 @@ import { UserProvider, SettingsProvider } from "@plasius/profile";
 
 `UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
 
+Both providers also support transport injection so host applications can keep site-specific data access outside the shared package:
+
+```tsx
+import {
+  SettingsProvider,
+  UserProvider,
+  type SettingsDataClient,
+  type UserProfileClient,
+} from "@plasius/profile";
+
+const userClient: UserProfileClient = {
+  load: async (userId) => graphBackedUserClient.load(userId),
+  create: async (userId) => graphBackedUserClient.create(userId),
+  save: async (user) => graphBackedUserClient.save(user),
+};
+
+const settingsClient: SettingsDataClient = {
+  load: async (configUrl) => graphBackedSettingsClient.load(configUrl),
+  save: async (configUrl, state) => graphBackedSettingsClient.save(configUrl, state),
+};
+
+<UserProvider client={userClient}>
+  <SettingsProvider configUrl="/settings" client={settingsClient}>
+    <App />
+  </SettingsProvider>
+</UserProvider>;
+```
+
+If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius/auth/useAuthorizedFetch`.
+
 ## Development
 
 ```bash

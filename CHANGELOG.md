@@ -9,10 +9,10 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - `UserProvider` and `SettingsProvider` now accept injected transport clients so host applications can route profile and settings traffic through site-specific adapters instead of the built-in HTTP path.
 
 - **Changed**
-  - (placeholder)
+  - The default provider transport remains the existing `useAuthorizedFetch` HTTP implementation when no injected client is supplied, preserving backwards compatibility for current consumers.
 
 - **Fixed**
   - (placeholder)

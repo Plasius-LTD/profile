@@ -174,6 +174,33 @@ describe("UserProvider logic", () => {
     );
   });
 
+  it("supports injected user profile clients for reusable transport composition", async () => {
+    const dispatch = vi.fn<(action: UserAction) => void>();
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const client = {
+      load: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue(createValidUser()),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await loadOrCreateUserProfile(VALID_USER_ID, client, dispatch, logger);
+    await saveUserProfile(createValidUser(), client, logger);
+
+    expect(client.load).toHaveBeenCalledWith(VALID_USER_ID);
+    expect(client.create).toHaveBeenCalledWith(VALID_USER_ID);
+    expect(client.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: VALID_USER_ID })
+    );
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "setUser" })
+    );
+    expect(logger.info).toHaveBeenCalledWith("✅ User profile saved successfully.");
+  });
+
   it("loads existing users and dispatches setUser", async () => {
     const dispatch = vi.fn<(action: UserAction) => void>();
     const fetchMock = vi.fn().mockResolvedValue(okJson(createValidUser()));
@@ -328,6 +355,27 @@ describe("SettingsProvider logic", () => {
     await expect(
       persistSettingsEntity(failingSave, "/settings/config", stateFromEntity(entity))
     ).rejects.toThrow("Save failed with status 500");
+  });
+
+  it("supports injected settings clients for reusable transport composition", async () => {
+    const entity = {
+      id: "settings-3",
+      partitionKey: VALID_USER_ID,
+      settings: { theme: "system" },
+    };
+    const client = {
+      load: vi.fn().mockResolvedValue(entity),
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    const state = stateFromEntity(entity);
+
+    await expect(loadSettingsEntity(client, "/settings/config")).resolves.toEqual(entity);
+    await expect(
+      persistSettingsEntity(client, "/settings/config", state)
+    ).resolves.toBeUndefined();
+
+    expect(client.load).toHaveBeenCalledWith("/settings/config");
+    expect(client.save).toHaveBeenCalledWith("/settings/config", state);
   });
 });
 
