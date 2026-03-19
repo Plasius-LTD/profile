@@ -20,6 +20,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 - **Security**
   - (placeholder)
 
+## [1.0.18] - 2026-03-19
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
 ## [1.0.17] - 2026-03-13
 
 - **Added**
@@ -192,7 +206,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.17...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.18...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -218,3 +232,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.15]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.15
 [1.0.16]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.16
 [1.0.17]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.17
+[1.0.18]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.18
