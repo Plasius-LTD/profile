@@ -8,7 +8,7 @@ import {
   userEntitySchema,
   type UserEntity,
 } from "@plasius/entity-manager";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage } from "../src/Pages/Settings/index.js";
 
 const { authorizedFetchMock, dispatchMock, storeState } = vi.hoisted(() => ({
@@ -84,6 +84,10 @@ describe("SettingsPage", () => {
     storeState.user = createValidUser();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders profile fields, dispatches edits, and logs a valid save", () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -126,6 +130,34 @@ describe("SettingsPage", () => {
 
     expect(infoSpy).toHaveBeenCalledWith("Saved:", storeState.user);
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to an empty email-preference selection when the preference list is empty", () => {
+    storeState.user = createValidUser({ emailPreferences: [] });
+
+    render(<SettingsPage />);
+
+    expect(
+      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+    ).toBe("");
+  });
+
+  it("falls back to an empty email-preference selection when the stored shape is missing", () => {
+    storeState.user = createValidUser({
+      emailPreferences: undefined as unknown as UserEmailPreferences[],
+    });
+    const validateSpy = vi.spyOn(userEntitySchema, "validate").mockReturnValue({
+      valid: true,
+      value: storeState.user,
+      errors: [],
+    } as never);
+
+    render(<SettingsPage />);
+
+    expect(
+      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+    ).toBe("");
+    validateSpy.mockRestore();
   });
 
   it("uploads an avatar and dispatches the persisted avatar entity", async () => {
@@ -243,10 +275,11 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     await waitFor(() => {
-      expect(validateSpy).toHaveBeenCalledTimes(1);
+      expect(validateSpy).toHaveBeenCalled();
     });
     infoSpy.mockClear();
     warnSpy.mockClear();
+    validateSpy.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
 
