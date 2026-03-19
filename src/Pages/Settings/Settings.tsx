@@ -29,6 +29,9 @@ export function SettingsPage() {
   const { t } = useI18n();
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
+  const selectedEmailPreference = Array.isArray(user?.emailPreferences)
+    ? (user.emailPreferences[0] ?? "")
+    : "";
 
   useEffect(() => {
     if (user) {
@@ -108,9 +111,9 @@ export function SettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const errors = userEntitySchema.validate(user);
-    if (errors) {
-      console.warn("Validation failed", errors);
+    const validation = userEntitySchema.validate(user);
+    if (!validation.valid || validation.errors?.length) {
+      console.warn("Validation failed", validation);
       return;
     }
 
@@ -205,7 +208,7 @@ export function SettingsPage() {
           {t("email_preferences")}
           <select
             name="emailPreferences"
-            value={user?.emailPreferences as UserEmailPreferences[]}
+            value={selectedEmailPreference}
             onChange={handleChange}
             className={styles.select}
           >

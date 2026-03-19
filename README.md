@@ -26,7 +26,11 @@ When CJS output is emitted under `dist-cjs/*.js` with `type: module`, `dist-cjs/
 ## Usage
 
 ```ts
-import { UserProvider, SettingsProvider } from "@plasius/profile";
+import {
+  ProfileRouteStatusPanel,
+  SettingsProvider,
+  UserProvider,
+} from "@plasius/profile";
 ```
 
 `UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
@@ -60,6 +64,19 @@ const settingsClient: SettingsDataClient = {
 ```
 
 If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius/auth/useAuthorizedFetch`.
+
+Profile-specific route shells are also exported so host applications can keep route state locally while reusing package-owned copy and composition:
+
+```tsx
+<ProfileRouteStatusPanel variant="loading" />
+<ProfileRouteStatusPanel variant="provisioning" requestId="profile-route-123" />
+<ProfileRouteStatusPanel
+  variant="error"
+  attempts={3}
+  requestId="profile-route-123"
+  onRetry={() => refetchProfile()}
+/>
+```
 
 ## Development
 

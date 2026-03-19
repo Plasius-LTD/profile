@@ -39,6 +39,7 @@
     "@plasius/react-query": "^1.0.12",
     "@plasius/react-state": "^1.2.5",
     "@plasius/schema": "^1.2.6",
+    "@plasius/sharedcomponents": "github:Plasius-LTD/sharedcomponents#40ad75a8fc0b4a8651f95316bf997257494867bd",
     "@plasius/translations": "^1.0.11"
   },
   "devDependencies": {
