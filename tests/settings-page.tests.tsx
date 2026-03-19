@@ -5,6 +5,7 @@ import {
   PreferredDisplayOrder,
   UserEmailPreferences,
   UserNotificationPreferences,
+  userEntitySchema,
   type UserEntity,
 } from "@plasius/entity-manager";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -202,5 +203,58 @@ describe("SettingsPage", () => {
         payload: expect.objectContaining({ field: "avatar" }),
       }),
     );
+  });
+
+  it("logs avatar validation failures when the upload payload is malformed", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    authorizedFetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ invalid: true }),
+    });
+
+    render(<SettingsPage />);
+
+    const file = new File(["binary"], "broken.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(errorSpy).toHaveBeenCalledWith(expect.any(Error));
+    });
+  });
+
+  it("warns instead of saving when the current user snapshot becomes invalid", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const validateSpy = vi.spyOn(userEntitySchema, "validate");
+    validateSpy
+      .mockImplementationOnce(() => ({
+        valid: true,
+        value: storeState.user,
+        errors: [],
+      }) as never)
+      .mockImplementation(() => ({
+        valid: false,
+        errors: ["forced failure"],
+      }) as never);
+
+    render(<SettingsPage />);
+
+    await waitFor(() => {
+      expect(validateSpy).toHaveBeenCalledTimes(1);
+    });
+    infoSpy.mockClear();
+    warnSpy.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Validation failed",
+      expect.objectContaining({ valid: false }),
+    );
+    expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
+    validateSpy.mockRestore();
   });
 });

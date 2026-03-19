@@ -11,6 +11,7 @@ vi.mock("@plasius/sharedcomponents", () => ({
     role = "status",
     actionLabel,
     onAction,
+    actionDisabled,
   }: {
     title: string;
     description: string;
@@ -18,12 +19,13 @@ vi.mock("@plasius/sharedcomponents", () => ({
     role?: "status" | "alert";
     actionLabel?: string;
     onAction?: () => void;
+    actionDisabled?: boolean;
   }) => (
     <section role={role} aria-label={title}>
       <p>{description}</p>
       {meta ? <p>{meta}</p> : null}
       {actionLabel && onAction ? (
-        <button type="button" onClick={onAction}>
+        <button type="button" onClick={onAction} disabled={actionDisabled}>
           {actionLabel}
         </button>
       ) : null}
@@ -53,6 +55,12 @@ describe("ProfileRouteStatusPanel", () => {
     expect(screen.getByText("Trace ID: profile-route-123")).toBeTruthy();
   });
 
+  it("falls back to a pending trace identifier while provisioning", () => {
+    render(<ProfileRouteStatusPanel variant="provisioning" />);
+
+    expect(screen.getByText("Trace ID: pending")).toBeTruthy();
+  });
+
   it("renders the retryable error shell and forwards retry actions", () => {
     const onRetry = vi.fn();
 
@@ -74,5 +82,20 @@ describe("ProfileRouteStatusPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Retry loading profile" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to an unavailable trace identifier for error states", () => {
+    render(
+      <ProfileRouteStatusPanel
+        variant="error"
+        onRetry={() => undefined}
+        retryDisabled
+      />,
+    );
+
+    expect(screen.getByText("Attempts: 0 | Trace ID: unavailable")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Retry loading profile" }).getAttribute("disabled"),
+    ).not.toBeNull();
   });
 });
