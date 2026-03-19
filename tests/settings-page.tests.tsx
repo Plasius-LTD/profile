@@ -257,4 +257,17 @@ describe("SettingsPage", () => {
     expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
     validateSpy.mockRestore();
   });
+
+  it("throws during mount when the provided user snapshot is invalid", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const validateSpy = vi.spyOn(userEntitySchema, "validate").mockReturnValue({
+      valid: false,
+      errors: ["forced mount failure"],
+    } as never);
+
+    expect(() => render(<SettingsPage />)).toThrow(/Invalid user/);
+
+    validateSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });
