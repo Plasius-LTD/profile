@@ -4,15 +4,39 @@ import { validateUserId } from "@plasius/schema";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { createScopedStoreContext, type IState } from "@plasius/react-state";
 
+const DEFAULT_USER_ENTITY_VERSION = "1.0.0";
+
+function normalizeUserEntityVersion(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^\d+\.\d+\.\d+$/.test(trimmed)) {
+      return trimmed;
+    }
+    if (/^\d+$/.test(trimmed)) {
+      return `${trimmed}.0.0`;
+    }
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${Math.trunc(value)}.0.0`;
+  }
+
+  return DEFAULT_USER_ENTITY_VERSION;
+}
+
 export function ValidateUser(user: UserEntity) {
-  const validated = userEntitySchema.validate(user);
+  const normalizedUser = {
+    ...user,
+    version: normalizeUserEntityVersion(user.version),
+  } as UserEntity;
+  const validated = userEntitySchema.validate(normalizedUser);
   if (!validated.valid || !validated.value) {
     throw new Error(
       `Invalid User Profile: ${validated.errors?.join(", ") ?? "unknown error"}`
     );
   }
   return {
-    ...user,
+    ...normalizedUser,
     ...(validated.value as Partial<UserEntity>),
   } as UserEntity;
 }

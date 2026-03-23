@@ -75,6 +75,12 @@ describe("UserProvider logic", () => {
     expect(() => ValidateUser({} as UserEntity)).toThrow("Invalid User Profile");
   });
 
+  it("normalizes legacy numeric user versions before schema validation", () => {
+    const validated = ValidateUser(createValidUser({ version: 1 as never }));
+
+    expect(validated.version).toBe("1.0.0");
+  });
+
   it("applies userReducer state transitions", () => {
     const user = createValidUser();
     const withUserId = userReducer(initialUserState, {
@@ -218,6 +224,26 @@ describe("UserProvider logic", () => {
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: "setUser" })
     );
+  });
+
+  it("normalizes legacy numeric user versions returned by load before dispatching", async () => {
+    const dispatch = vi.fn<(action: UserAction) => void>();
+    const fetchMock = vi.fn().mockResolvedValue(okJson(createValidUser({ version: 1 as never })));
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    await loadOrCreateUserProfile(VALID_USER_ID, fetchMock, dispatch, logger);
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setUser",
+      user: expect.objectContaining({
+        id: VALID_USER_ID,
+        version: "1.0.0",
+      }),
+    });
   });
 
   it("creates users when /get returns 404", async () => {
