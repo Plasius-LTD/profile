@@ -1,0 +1,101 @@
+.avatarPanel {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--shell-border, #2d3748) 60%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--shell-surface, #111827) 72%, transparent);
+}
+
+.avatarPanelHeader {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.avatarPanelTitle {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.avatarPanelSummary {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.92rem;
+}
+
+.avatarUploadLabel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.avatarUploadLabelText {
+  font-weight: 600;
+}
+
+.avatarUploadInput {
+  max-width: 100%;
+}
+
+.avatarMeta {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.avatarPreviewPanel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #7dd3fc 20%, transparent), transparent 55%),
+    color-mix(in srgb, var(--shell-surface, #111827) 64%, black 10%);
+  border: 1px solid color-mix(in srgb, #7dd3fc 30%, var(--shell-border, #2d3748));
+}
+
+.avatarPreviewImage {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 1.2rem;
+  object-fit: cover;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, #f8fafc 22%, transparent), transparent 60%),
+    color-mix(in srgb, var(--shell-surface, #111827) 78%, black 12%);
+  border: 1px solid color-mix(in srgb, #e2e8f0 18%, transparent);
+  box-shadow: 0 0.8rem 1.8rem color-mix(in srgb, black 25%, transparent);
+}
+
+.avatarPreviewMeta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.avatarPreviewLabel {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.avatarStatus {
+  margin: 0;
+  color: #60a5fa;
+}
+
+.avatarError {
+  margin: 0;
+  color: #fca5a5;
+}
+
+@media (max-width: 720px) {
+  .avatarPreviewPanel {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}

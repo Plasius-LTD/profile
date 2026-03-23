@@ -9,13 +9,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added a reusable `AvatarUploadPanel` component for staged avatar upload, preview, and profile-store updates.
 
 - **Changed**
-  - (placeholder)
+  - Extended `SettingsPage` with `hideAvatarField` so host applications can replace the legacy inline avatar input with their own upload transport while keeping the rest of the profile editor.
 
 - **Fixed**
-  - (placeholder)
+  - Cleared stale local avatar previews when a newly selected file fails validation, preventing invalid replacement attempts from leaving the previous staged preview onscreen.
 
 - **Security**
   - (placeholder)

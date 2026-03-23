@@ -132,6 +132,14 @@ describe("SettingsPage", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it("suppresses the legacy avatar field when hideAvatarField is enabled", () => {
+    render(<SettingsPage hideAvatarField />);
+
+    expect(screen.queryByLabelText("upload_avatar")).toBeNull();
+    expect(screen.queryByRole("img", { name: "avatar_preview" })).toBeNull();
+    expect(screen.getByLabelText("display_name")).toBeTruthy();
+  });
+
   it("falls back to an empty email-preference selection when the preference list is empty", () => {
     storeState.user = createValidUser({ emailPreferences: [] });
 

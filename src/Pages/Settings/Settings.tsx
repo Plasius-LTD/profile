@@ -12,6 +12,10 @@ import { UserStore } from "../../UserProvider.js";
 
 import styles from "./Settings.module.css";
 
+export interface SettingsPageProps {
+  hideAvatarField?: boolean;
+}
+
 const getEmailPreferenceOptions = () =>
   Object.entries(UserEmailPreferences).map(([key, value]) => ({
     label: key.replace(/([a-z])([A-Z])/g, "$1 $2"), // Optional: format nicely
@@ -24,7 +28,7 @@ const getPreferredDisplayOrder = () =>
     value,
   }));
 
-export function SettingsPage() {
+export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   const authorizedFetch = useAuthorizedFetch();
   const { t } = useI18n();
   const { user } = UserStore.useStore();
@@ -124,25 +128,29 @@ export function SettingsPage() {
     <div className={styles.settingsContainer}>
       <form onSubmit={handleSubmit} className={styles.settingsForm}>
         <h2>{t("profile_settings")}</h2>
-        <label className={styles.label}>
-          {t("upload_avatar")}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            className={styles.input}
-          />
-        </label>
+        {!hideAvatarField ? (
+          <>
+            <label className={styles.label}>
+              {t("upload_avatar")}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className={styles.input}
+              />
+            </label>
 
-        {user?.avatar?.url && (
-          <div>
-            <img
-              src={(user?.avatar as UserAvatarEntity)?.url as string}
-              alt={t("avatar_preview")}
-              className={styles.avatarPreview}
-            />
-          </div>
-        )}
+            {user?.avatar?.url && (
+              <div>
+                <img
+                  src={(user?.avatar as UserAvatarEntity)?.url as string}
+                  alt={t("avatar_preview")}
+                  className={styles.avatarPreview}
+                />
+              </div>
+            )}
+          </>
+        ) : null}
         <label className={styles.label}>
           {t("first_name")}
           <input
