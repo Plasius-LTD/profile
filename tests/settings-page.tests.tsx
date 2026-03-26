@@ -231,6 +231,17 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("ignores avatar changes when no file is selected", () => {
+    render(<SettingsPage />);
+
+    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+      target: { files: [] },
+    });
+
+    expect(authorizedFetchMock).not.toHaveBeenCalled();
+    expect(dispatchMock).not.toHaveBeenCalled();
+  });
+
   it("renders avatar upload failures without dispatching an update", async () => {
     authorizedFetchMock.mockResolvedValue({
       ok: false,
@@ -261,6 +272,56 @@ describe("SettingsPage", () => {
         payload: expect.objectContaining({ field: "avatar" }),
       }),
     );
+  });
+
+  it("renders avatar upload failures from a response message payload", async () => {
+    authorizedFetchMock.mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers({
+        "content-type": "application/json",
+      }),
+      json: async () => ({
+        message: "Avatar upload stalled before storage confirmed the write.",
+      }),
+    });
+
+    render(<SettingsPage />);
+
+    const file = new File(["binary"], "broken.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Avatar upload stalled before storage confirmed the write.",
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it("falls back to plain-text avatar upload failures when JSON is unavailable", async () => {
+    authorizedFetchMock.mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers({
+        "content-type": "text/plain",
+      }),
+      text: async () => "Avatar upload gateway timed out.",
+    });
+
+    render(<SettingsPage />);
+
+    const file = new File(["binary"], "broken.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Avatar upload gateway timed out.")).toBeTruthy();
+    });
   });
 
   it("renders avatar validation failures when the upload payload is malformed", async () => {
@@ -322,6 +383,25 @@ describe("SettingsPage", () => {
     expect(screen.getByLabelText("email").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByLabelText("first_name").getAttribute("aria-invalid")).toBe("true");
     expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
+    validateSpy.mockRestore();
+  });
+
+  it("renders field-scoped validation messages without rewriting non-required errors", async () => {
+    const validateSpy = vi.spyOn(userEntitySchema, "validate");
+    validateSpy.mockImplementation(() => ({
+      valid: false,
+      errors: ["Display name contains unsupported characters: name.displayName"],
+    }) as never);
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+
+    expect(
+      screen.getByText("Display name contains unsupported characters: name.displayName"),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("display_name").getAttribute("aria-invalid")).toBe("true");
+
     validateSpy.mockRestore();
   });
 
