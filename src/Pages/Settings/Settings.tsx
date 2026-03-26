@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import type { UserAvatarEntity, UserName } from "@plasius/entity-manager";
+import React from "react";
+import type { UserAvatarEntity } from "@plasius/entity-manager";
 import {
   userEntitySchema,
   userAvatarSchema,
@@ -37,21 +37,21 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     ? (user.emailPreferences[0] ?? "")
     : "";
 
-  useEffect(() => {
-    if (user) {
-      const res = userEntitySchema.validate(user);
-      if (!res.valid || res.errors?.length != 0) {
-        throw new Error(
-          `Invalid user ${String(user)}. Errors: ${res.errors?.join("\n") ?? "unknown"}`
-        );
-      }
-    }
-  }, [user]);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "emailPreferences") {
+      dispatch({
+        type: "updateField",
+        payload: {
+          field: "emailPreferences",
+          value: value ? [value] : [],
+        },
+      });
+      return;
+    }
 
     if (name.startsWith("name.")) {
       const [, field] = name.split(".");
@@ -95,17 +95,11 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         );
       }
 
-      const base = validatedAvatar.value as unknown as UserAvatarEntity;
-      const userAvatar: UserAvatarEntity = {
-        ...base,
-        originalName: file.name,
-      };
-
       dispatch({
         type: "updateField",
         payload: {
           field: "avatar",
-          value: userAvatar,
+          value: validatedAvatar.value as unknown as UserAvatarEntity,
         },
       });
     } catch (err) {
@@ -155,7 +149,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           {t("first_name")}
           <input
             name="name.firstName"
-            value={(user?.name as UserName)?.firstName as string}
+            value={user?.name?.firstName ?? ""}
             onChange={handleChange}
             className={styles.input}
           />
@@ -164,7 +158,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           {t("middle_name")}
           <input
             name="name.middleName"
-            value={(user?.name as UserName)?.middleName as string}
+            value={user?.name?.middleName ?? ""}
             onChange={handleChange}
             className={styles.input}
           />
@@ -173,7 +167,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           {t("last_name")}
           <input
             name="name.lastName"
-            value={(user?.name as UserName)?.lastName as string}
+            value={user?.name?.lastName ?? ""}
             onChange={handleChange}
             className={styles.input}
           />
@@ -182,7 +176,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           {t("display_name")}
           <input
             name="name.displayName"
-            value={(user?.name as UserName)?.displayName as string}
+            value={user?.name?.displayName ?? ""}
             onChange={handleChange}
             className={styles.input}
           />
@@ -190,8 +184,8 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         <label className={styles.label}>
           {t("preferred_name_display")}
           <select
-            name="displayPreferences"
-            value={(user?.name as UserName).preferredDisplayOrder as PreferredDisplayOrder}
+            name="name.preferredDisplayOrder"
+            value={user?.name?.preferredDisplayOrder ?? ""}
             onChange={handleChange}
             className={styles.select}
           >
@@ -207,7 +201,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           {t("email")}
           <input
             name="email"
-            value={user?.email}
+            value={user?.email ?? ""}
             onChange={handleChange}
             className={styles.input}
           />

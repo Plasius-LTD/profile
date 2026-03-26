@@ -105,8 +105,14 @@ describe("SettingsPage", () => {
     });
     fireEvent.change(screen.getByLabelText("preferred_name_display"), {
       target: {
-        name: "displayPreferences",
+        name: "name.preferredDisplayOrder",
         value: PreferredDisplayOrder.FIRST_NAME,
+      },
+    });
+    fireEvent.change(screen.getByLabelText("email_preferences"), {
+      target: {
+        name: "emailPreferences",
+        value: UserEmailPreferences.SECURITY,
       },
     });
 
@@ -119,10 +125,17 @@ describe("SettingsPage", () => {
       payload: { field: "email", value: "new@example.com" },
     });
     expect(dispatchMock).toHaveBeenCalledWith({
+      type: "updateNameField",
+      payload: {
+        field: "preferredDisplayOrder",
+        value: PreferredDisplayOrder.FIRST_NAME,
+      },
+    });
+    expect(dispatchMock).toHaveBeenCalledWith({
       type: "updateField",
       payload: {
-        field: "displayPreferences",
-        value: PreferredDisplayOrder.FIRST_NAME,
+        field: "emailPreferences",
+        value: [UserEmailPreferences.SECURITY],
       },
     });
 
@@ -212,7 +225,6 @@ describe("SettingsPage", () => {
           field: "avatar",
           value: expect.objectContaining({
             url: "https://cdn.example.com/avatar.png",
-            originalName: "avatar.png",
           }),
         },
       });
@@ -270,21 +282,12 @@ describe("SettingsPage", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const validateSpy = vi.spyOn(userEntitySchema, "validate");
     validateSpy
-      .mockImplementationOnce(() => ({
-        valid: true,
-        value: storeState.user,
-        errors: [],
-      }) as never)
       .mockImplementation(() => ({
         valid: false,
         errors: ["forced failure"],
       }) as never);
 
     render(<SettingsPage />);
-
-    await waitFor(() => {
-      expect(validateSpy).toHaveBeenCalled();
-    });
     infoSpy.mockClear();
     warnSpy.mockClear();
     validateSpy.mockClear();
@@ -299,16 +302,16 @@ describe("SettingsPage", () => {
     validateSpy.mockRestore();
   });
 
-  it("throws during mount when the provided user snapshot is invalid", () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const validateSpy = vi.spyOn(userEntitySchema, "validate").mockReturnValue({
-      valid: false,
-      errors: ["forced mount failure"],
-    } as never);
+  it("keeps rendering draft input values without throwing when the snapshot is temporarily invalid", () => {
+    storeState.user = createValidUser({
+      email: "",
+      emailPreferences: "security" as unknown as UserEmailPreferences[],
+    });
 
-    expect(() => render(<SettingsPage />)).toThrow(/Invalid user/);
-
-    validateSpy.mockRestore();
-    errorSpy.mockRestore();
+    expect(() => render(<SettingsPage />)).not.toThrow();
+    expect(screen.getByLabelText("email")).toBeTruthy();
+    expect(
+      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+    ).toBe("");
   });
 });

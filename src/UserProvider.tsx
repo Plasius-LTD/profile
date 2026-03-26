@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
+  baseEntitySchema,
   PreferredDisplayOrder,
+  type UserEmailPreferences,
   type UserAvatarEntity,
   type UserEntity,
+  userAvatarSchema,
   userEntitySchema,
 } from "@plasius/entity-manager";
 import { validateUserId } from "@plasius/schema";
@@ -12,6 +15,7 @@ import { createScopedStoreContext, type IState } from "@plasius/react-state";
 const DEFAULT_USER_ENTITY_VERSION = "1.0.0";
 const DEFAULT_FIRST_NAME = "Plasius";
 const DEFAULT_DISPLAY_NAME = "Plasius User";
+const USER_PROFILE_AUTO_SAVE_DELAY_MS = 750;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -75,11 +79,30 @@ function normalizeUserEntityVersion(value: unknown): string {
   return DEFAULT_USER_ENTITY_VERSION;
 }
 
+function normalizeEmailPreferences(value: unknown): UserEmailPreferences[] | undefined {
+  if (Array.isArray(value)) {
+    const preferences = value.filter(
+      (entry): entry is UserEmailPreferences =>
+        typeof entry === "string" && entry.trim().length > 0,
+    );
+
+    return preferences.length > 0 ? preferences : [];
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? [trimmed as UserEmailPreferences] : [];
+  }
+
+  return undefined;
+}
+
 function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
   const unwrapped = unwrapUserEntityCandidate(user);
   const firstName = normalizeOptionalText(unwrapped.name?.firstName) ?? DEFAULT_FIRST_NAME;
   const lastName = normalizeOptionalText(unwrapped.name?.lastName) ?? firstName;
   const middleName = normalizeOptionalText(unwrapped.name?.middleName);
+  const emailPreferences = normalizeEmailPreferences(unwrapped.emailPreferences);
   const fallbackDisplayName = `${firstName} ${lastName}`.trim();
   const displayName =
     normalizeOptionalText(unwrapped.name?.displayName)
@@ -88,6 +111,7 @@ function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
   return {
     ...unwrapped,
     version: normalizeUserEntityVersion(unwrapped.version),
+    ...(emailPreferences !== undefined ? { emailPreferences } : {}),
     name: {
       firstName,
       ...(middleName ? { middleName } : {}),
@@ -99,18 +123,64 @@ function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
   } as UserEntity;
 }
 
+function sanitizeUserAvatar(avatar: unknown): UserAvatarEntity | undefined {
+  if (!isRecord(avatar)) {
+    return undefined;
+  }
+
+  const validatedAvatar = userAvatarSchema.validate(avatar as UserAvatarEntity);
+  if (!validatedAvatar.valid || !validatedAvatar.value) {
+    throw new Error(
+      `Invalid User Avatar: ${validatedAvatar.errors?.join(", ") ?? "unknown error"}`
+    );
+  }
+
+  return {
+    partitionKey: validatedAvatar.value.partitionKey,
+    id: validatedAvatar.value.id,
+    filename: validatedAvatar.value.filename,
+    contentType: validatedAvatar.value.contentType,
+    url: validatedAvatar.value.url,
+    size: validatedAvatar.value.size,
+    width: validatedAvatar.value.width,
+    height: validatedAvatar.value.height,
+    createdAt: validatedAvatar.value.createdAt,
+    createdBy: validatedAvatar.value.createdBy,
+    version: validatedAvatar.value.version,
+  } as unknown as UserAvatarEntity;
+}
+
 export function ValidateUser(user: UserEntity) {
   const normalizedUser = normalizeUserEntityCandidate(user);
+  const validatedBase = baseEntitySchema.validate(normalizedUser);
   const validated = userEntitySchema.validate(normalizedUser);
+  if (!validatedBase.valid || !validatedBase.value) {
+    throw new Error(
+      `Invalid User Profile: ${validatedBase.errors?.join(", ") ?? "unknown error"}`
+    );
+  }
   if (!validated.valid || !validated.value) {
     throw new Error(
       `Invalid User Profile: ${validated.errors?.join(", ") ?? "unknown error"}`
     );
   }
+
+  const sanitizedAvatar = "avatar" in normalizedUser
+    ? sanitizeUserAvatar(normalizedUser.avatar)
+    : undefined;
+
   return {
-    ...normalizedUser,
-    ...(validated.value as Partial<UserEntity>),
-  } as UserEntity;
+    ...(validatedBase.value as Record<string, unknown>),
+    email: validated.value.email,
+    name: validated.value.name,
+    ...("emailPreferences" in validated.value
+      ? { emailPreferences: validated.value.emailPreferences }
+      : {}),
+    ...("notificationPreferences" in validated.value
+      ? { notificationPreferences: validated.value.notificationPreferences }
+      : {}),
+    ...("avatar" in normalizedUser ? { avatar: sanitizedAvatar } : {}),
+  } as unknown as UserEntity;
 }
 
 export interface UserState extends IState {
@@ -275,8 +345,10 @@ export async function saveUserProfile(
   user: UserEntity | undefined,
   clientOrFetch: AuthorizedFetch | UserProfileClient,
   logger: UserLogger = console
-): Promise<void> {
-  if (!user) return;
+): Promise<boolean> {
+  if (!user) {
+    return false;
+  }
 
   try {
     const validatedUser = ValidateUser(user);
@@ -287,8 +359,10 @@ export async function saveUserProfile(
     const client = resolveUserProfileClient(clientOrFetch);
     await client.save(validatedUser);
     logger.info("✅ User profile saved successfully.");
+    return true;
   } catch (err) {
     logger.error("❌ Error saving user profile:", err);
+    return false;
   }
 }
 
@@ -297,8 +371,8 @@ export async function loadOrCreateUserProfile(
   clientOrFetch: AuthorizedFetch | UserProfileClient,
   dispatch: (action: UserAction) => void,
   logger: UserLogger = console
-): Promise<void> {
-  if (!validateUserId(userId)) return;
+): Promise<UserEntity | null> {
+  if (!validateUserId(userId)) return null;
 
   const client = resolveUserProfileClient(clientOrFetch);
 
@@ -309,13 +383,15 @@ export async function loadOrCreateUserProfile(
       const createdData = await client.create(userId);
       const validatedCreatedUser = ValidateUser(createdData as UserEntity);
       dispatch({ type: "setUser", user: validatedCreatedUser });
-      return;
+      return validatedCreatedUser;
     }
 
     const validatedUser = ValidateUser(loadedUser as UserEntity);
     dispatch({ type: "setUser", user: validatedUser });
+    return validatedUser;
   } catch (err) {
     logger.warn("⚠️ Failed to load or create user profile:", err);
+    return null;
   }
 }
 
@@ -337,26 +413,75 @@ const UserInitializer = ({ client }: { client?: UserProfileClient }) => {
   const authorizedFetch = useAuthorizedFetch();
   const dispatch = UserStore.useDispatch();
   const { userId, user } = UserStore.useStore();
+  const hasHydratedUserRef = useRef(false);
+  const lastSavedSnapshotRef = useRef<string | null>(null);
   const userProfileClient = useMemo(
     () => client ?? createHttpUserProfileClient(authorizedFetch),
     [authorizedFetch, client],
   );
 
-  const saveUser = useCallback(async () => {
-    await saveUserProfile(user, userProfileClient);
-  }, [user, userProfileClient]);
-
   useEffect(() => {
-    if (!userId) return;
+    let cancelled = false;
 
-    void loadOrCreateUserProfile(userId, userProfileClient, dispatch);
+    hasHydratedUserRef.current = false;
+    lastSavedSnapshotRef.current = null;
+
+    if (!userId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    void loadOrCreateUserProfile(userId, userProfileClient, dispatch).then((loadedUser) => {
+      if (cancelled || !loadedUser) {
+        return;
+      }
+
+      hasHydratedUserRef.current = true;
+      lastSavedSnapshotRef.current = JSON.stringify(loadedUser);
+    });
 
     return () => {
-      saveUser().catch((err: unknown) => {
-        console.error("❌ Error saving during cleanup:", err);
-      });
+      cancelled = true;
     };
-  }, [userId, userProfileClient, dispatch, saveUser]);
+  }, [userId, userProfileClient, dispatch]);
+
+  useEffect(() => {
+    if (!userId || !user) {
+      return;
+    }
+
+    let validatedUser: UserEntity;
+    try {
+      validatedUser = ValidateUser(user);
+    } catch {
+      return;
+    }
+
+    const nextSnapshot = JSON.stringify(validatedUser);
+
+    if (!hasHydratedUserRef.current) {
+      hasHydratedUserRef.current = true;
+      lastSavedSnapshotRef.current = nextSnapshot;
+      return;
+    }
+
+    if (nextSnapshot === lastSavedSnapshotRef.current) {
+      return;
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      void saveUserProfile(validatedUser, userProfileClient).then((saved) => {
+        if (saved) {
+          lastSavedSnapshotRef.current = nextSnapshot;
+        }
+      });
+    }, USER_PROFILE_AUTO_SAVE_DELAY_MS);
+
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [user, userId, userProfileClient]);
 
   return null;
 };

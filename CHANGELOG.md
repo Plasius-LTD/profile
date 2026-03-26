@@ -20,6 +20,22 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 - **Security**
   - (placeholder)
 
+## [1.0.23] - 2026-03-26
+
+- **Added**
+  - Added a component regression test covering `UserProvider` load and autosave lifecycle so profile updates no longer regress into repeated load/save loops.
+
+- **Changed**
+  - `SettingsPage` now keeps draft field values renderable while the user is editing, instead of throwing on transient invalid snapshots.
+  - `UserProvider` now debounces autosave after hydrated user changes instead of attempting saves from effect cleanup.
+
+- **Fixed**
+  - Corrected profile form field mapping so `preferredDisplayOrder` updates `name.preferredDisplayOrder` and `emailPreferences` persists as a string array.
+  - Sanitized profile save payloads to drop draft-only or preview-only fields such as legacy `displayPreferences` and avatar `originalName`.
+
+- **Security**
+  - (placeholder)
+
 ## [1.0.22] - 2026-03-26
 
 - **Added**

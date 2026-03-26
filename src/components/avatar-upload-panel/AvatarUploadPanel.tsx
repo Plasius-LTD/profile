@@ -126,10 +126,7 @@ export function AvatarUploadPanel({
         type: "updateField",
         payload: {
           field: "avatar",
-          value: {
-            ...avatar,
-            originalName: avatar.originalName ?? file.name,
-          },
+          value: avatar,
         },
       });
 

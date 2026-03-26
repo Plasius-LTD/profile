@@ -99,6 +99,30 @@ describe("UserProvider logic", () => {
     expect(validated.name.displayName).toBe("Alice Smith");
   });
 
+  it("strips draft-only fields that are not part of the user schema", () => {
+    const validated = ValidateUser({
+      ...createValidUser(),
+      displayPreferences: PreferredDisplayOrder.FIRST_NAME,
+      avatar: {
+        partitionKey: VALID_PARTITION_KEY,
+        id: VALID_USER_ID,
+        filename: "avatar.png",
+        contentType: "image/png",
+        url: "https://cdn.example.com/avatar.png",
+        size: 256,
+        width: 128,
+        height: 128,
+        createdAt: new Date().toISOString(),
+        createdBy: VALID_USER_ID,
+        version: 1,
+        originalName: "avatar.png",
+      },
+    } as unknown as UserEntity);
+
+    expect("displayPreferences" in (validated as Record<string, unknown>)).toBe(false);
+    expect("originalName" in (validated.avatar as Record<string, unknown>)).toBe(false);
+  });
+
   it("applies userReducer state transitions", () => {
     const user = createValidUser();
     const withUserId = userReducer(initialUserState, {

@@ -134,7 +134,6 @@ describe("AvatarUploadPanel", () => {
           field: "avatar",
           value: expect.objectContaining({
             url: "https://cdn.example.com/avatar.png",
-            originalName: "avatar.png",
           }),
         },
       });
