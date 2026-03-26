@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.26] - 2026-03-26
+
+- **Added**
   - Added rendered validation summaries and inline field errors to `SettingsPage` so invalid profile snapshots surface directly in the shared profile editor UI instead of only logging to the console.
 
 - **Changed**
@@ -306,7 +320,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.24...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.26...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -339,3 +353,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.22]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.22
 [1.0.23]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.23
 [1.0.24]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.24
+[1.0.26]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.26
