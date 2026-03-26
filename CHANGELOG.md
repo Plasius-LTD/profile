@@ -9,10 +9,10 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added package-level accessibility coverage for `SettingsPage` and `AvatarUploadPanel`, including deterministic fallback contrast checks for the avatar upload surface.
 
 - **Changed**
-  - (placeholder)
+  - `AvatarUploadPanel` now wires file-input descriptions, live status text, and validation errors through explicit ARIA relationships while exposing accessible fallback color tokens.
 
 - **Fixed**
   - (placeholder)

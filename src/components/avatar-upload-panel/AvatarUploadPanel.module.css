@@ -1,11 +1,12 @@
 .avatarPanel {
+  color: var(--avatar-panel-text-primary, #f8fafc);
   display: grid;
   gap: 0.75rem;
   margin: 0 0 1rem;
   padding: 0.9rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--shell-border, #2d3748) 60%, transparent);
+  border: 1px solid var(--avatar-panel-border, #334155);
   border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--shell-surface, #111827) 72%, transparent);
+  background: var(--avatar-panel-bg, #0f172a);
 }
 
 .avatarPanelHeader {
@@ -20,7 +21,7 @@
 
 .avatarPanelSummary {
   margin: 0;
-  opacity: 0.8;
+  color: var(--avatar-panel-text-secondary, #dbe7f7);
   font-size: 0.92rem;
 }
 
@@ -39,9 +40,13 @@
 
 .avatarMeta {
   margin: 0;
+  color: var(--avatar-panel-text-secondary, #dbe7f7);
   font-size: 0.9rem;
-  opacity: 0.8;
   overflow-wrap: anywhere;
+}
+
+.avatarMeta a {
+  color: var(--avatar-panel-text-accent, #a5f3fc);
 }
 
 .avatarPreviewPanel {
@@ -80,17 +85,17 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #7dd3fc;
+  color: var(--avatar-panel-text-accent, #a5f3fc);
 }
 
 .avatarStatus {
   margin: 0;
-  color: #60a5fa;
+  color: var(--avatar-panel-text-status, #bfdbfe);
 }
 
 .avatarError {
   margin: 0;
-  color: #fca5a5;
+  color: var(--avatar-panel-text-error, #fecaca);
 }
 
 @media (max-width: 720px) {

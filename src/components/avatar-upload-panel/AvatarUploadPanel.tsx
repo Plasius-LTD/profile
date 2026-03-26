@@ -1,6 +1,7 @@
-import { useEffect, useId, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ChangeEvent } from "react";
 import type { UserAvatarEntity } from "@plasius/entity-manager";
 import { UserStore } from "../../UserProvider.js";
+import { avatarUploadAccessibilityTheme } from "./accessibilityTheme.js";
 import styles from "./AvatarUploadPanel.module.css";
 
 export interface AvatarUploadProgressReporter {
@@ -48,6 +49,16 @@ function defaultSuccessMessage(fileName: string): string {
   return `Avatar uploaded successfully as ${fileName}.`;
 }
 
+const DEFAULT_AVATAR_UPLOAD_THEME_VARS = {
+  "--avatar-panel-bg": avatarUploadAccessibilityTheme.panelBackground,
+  "--avatar-panel-border": avatarUploadAccessibilityTheme.panelBorder,
+  "--avatar-panel-text-primary": avatarUploadAccessibilityTheme.primaryText,
+  "--avatar-panel-text-secondary": avatarUploadAccessibilityTheme.secondaryText,
+  "--avatar-panel-text-accent": avatarUploadAccessibilityTheme.accentText,
+  "--avatar-panel-text-status": avatarUploadAccessibilityTheme.statusText,
+  "--avatar-panel-text-error": avatarUploadAccessibilityTheme.errorText,
+} as CSSProperties;
+
 export function AvatarUploadPanel({
   accept,
   constraintsDescription,
@@ -66,6 +77,10 @@ export function AvatarUploadPanel({
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const titleId = useId();
+  const constraintsId = useId();
+  const previewDescriptionId = useId();
+  const statusId = useId();
+  const errorId = useId();
   const [uploadError, setUploadError] = useState<string>("");
   const [uploadMessage, setUploadMessage] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -147,14 +162,29 @@ export function AvatarUploadPanel({
   const currentAvatarUrl =
     user?.avatar && typeof user.avatar.url === "string" ? user.avatar.url : "";
   const previewUrl = localPreviewUrl ?? currentAvatarUrl;
+  const inputDescribedBy = [
+    constraintsId,
+    previewDescriptionId,
+    uploadMessage ? statusId : "",
+    uploadError ? errorId : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <section className={styles.avatarPanel} aria-labelledby={titleId}>
+    <section
+      className={styles.avatarPanel}
+      aria-labelledby={titleId}
+      aria-busy={isUploading || undefined}
+      style={DEFAULT_AVATAR_UPLOAD_THEME_VARS}
+    >
       <div className={styles.avatarPanelHeader}>
         <h3 id={titleId} className={styles.avatarPanelTitle}>
           {title}
         </h3>
-        <p className={styles.avatarPanelSummary}>{constraintsDescription}</p>
+        <p id={constraintsId} className={styles.avatarPanelSummary}>
+          {constraintsDescription}
+        </p>
       </div>
 
       <label className={styles.avatarUploadLabel}>
@@ -164,6 +194,9 @@ export function AvatarUploadPanel({
           accept={accept}
           className={styles.avatarUploadInput}
           disabled={isUploading}
+          aria-describedby={inputDescribedBy || undefined}
+          aria-errormessage={uploadError ? errorId : undefined}
+          aria-invalid={uploadError ? "true" : undefined}
           onChange={handleAvatarUpload}
         />
       </label>
@@ -179,7 +212,7 @@ export function AvatarUploadPanel({
             <p className={styles.avatarPreviewLabel}>
               {localPreviewUrl ? selectedPreviewLabel : currentPreviewLabel}
             </p>
-            <p className={styles.avatarMeta}>
+            <p id={previewDescriptionId} className={styles.avatarMeta}>
               {localPreviewUrl
                 ? selectedAvatarDescription(localPreviewName)
                 : currentAvatarDescription}
@@ -192,17 +225,24 @@ export function AvatarUploadPanel({
           </div>
         </div>
       ) : (
-        <p className={styles.avatarMeta}>{emptyStateText}</p>
+        <p id={previewDescriptionId} className={styles.avatarMeta}>
+          {emptyStateText}
+        </p>
       )}
 
       {uploadMessage ? (
-        <p className={styles.avatarStatus} role="status" aria-live="polite">
+        <p
+          id={statusId}
+          className={styles.avatarStatus}
+          role="status"
+          aria-live="polite"
+        >
           {uploadMessage}
         </p>
       ) : null}
 
       {uploadError ? (
-        <p className={styles.avatarError} role="alert">
+        <p id={errorId} className={styles.avatarError} role="alert">
           {uploadError}
         </p>
       ) : null}
