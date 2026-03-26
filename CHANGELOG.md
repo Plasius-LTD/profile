@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.24] - 2026-03-26
+
+- **Added**
   - Added package-level accessibility coverage for `SettingsPage` and `AvatarUploadPanel`, including deterministic fallback contrast checks for the avatar upload surface.
 
 - **Changed**
@@ -292,7 +306,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.23...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.24...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -324,3 +338,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.21]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.21
 [1.0.22]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.22
 [1.0.23]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.23
+[1.0.24]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.24
