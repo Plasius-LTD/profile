@@ -57,11 +57,14 @@ function normalizeOptionalText(value: unknown): string | undefined {
 function normalizeUserEntityVersion(value: unknown): string {
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (/^\d+\.\d+\.\d+$/.test(trimmed)) {
-      return trimmed;
-    }
-    if (/^\d+$/.test(trimmed)) {
-      return `${trimmed}.0.0`;
+    const numericSegments = trimmed.split(".");
+    if (
+      numericSegments.length >= 1
+      && numericSegments.length <= 3
+      && numericSegments.every((segment) => /^\d+$/.test(segment))
+    ) {
+      const [major = "0", minor = "0", patch = "0"] = numericSegments;
+      return `${Number.parseInt(major, 10)}.${Number.parseInt(minor, 10)}.${Number.parseInt(patch, 10)}`;
     }
   }
 

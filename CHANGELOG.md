@@ -15,7 +15,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Canonicalized legacy zero-padded user entity versions such as `1.0.01` before schema validation so older stored profiles no longer fail to load.
 
 - **Security**
   - (placeholder)

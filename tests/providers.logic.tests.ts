@@ -81,6 +81,12 @@ describe("UserProvider logic", () => {
     expect(validated.version).toBe("1.0.0");
   });
 
+  it("canonicalizes zero-padded semantic user versions before schema validation", () => {
+    const validated = ValidateUser(createValidUser({ version: "1.0.01" as never }));
+
+    expect(validated.version).toBe("1.0.1");
+  });
+
   it("unwraps graph-shaped user payload envelopes before validation", () => {
     const validated = ValidateUser({
       data: createValidUser({ version: 7 as never }),
