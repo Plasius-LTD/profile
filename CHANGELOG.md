@@ -15,6 +15,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.21] - 2026-03-26
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
   - User hydration now unwraps graph-style `data`/`user`/`profile` envelopes before schema validation so profile settings can render even when upstream transports return wrapped payloads alongside legacy version metadata.
 
 - **Security**
@@ -234,7 +248,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.20...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.21...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -263,3 +277,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.18]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.18
 [1.0.19]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.19
 [1.0.20]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.20
+[1.0.21]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.21
