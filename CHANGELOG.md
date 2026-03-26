@@ -23,6 +23,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [1.0.23] - 2026-03-26
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.23] - 2026-03-26
+
+- **Added**
   - Added a component regression test covering `UserProvider` load and autosave lifecycle so profile updates no longer regress into repeated load/save loops.
 
 - **Changed**
@@ -278,7 +292,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.22...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.23...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -309,3 +323,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.20]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.20
 [1.0.21]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.21
 [1.0.22]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.22
+[1.0.23]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.23
