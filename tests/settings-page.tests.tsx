@@ -231,12 +231,16 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("logs avatar upload failures without dispatching an update", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("renders avatar upload failures without dispatching an update", async () => {
     authorizedFetchMock.mockResolvedValue({
       ok: false,
       status: 500,
-      json: async () => ({}),
+      headers: new Headers({
+        "content-type": "application/json",
+      }),
+      json: async () => ({
+        error: "Avatar upload failed because storage is unavailable.",
+      }),
     });
 
     render(<SettingsPage />);
@@ -247,7 +251,9 @@ describe("SettingsPage", () => {
     });
 
     await waitFor(() => {
-      expect(errorSpy).toHaveBeenCalledWith(expect.any(Error));
+      expect(
+        screen.getByText("Avatar upload failed because storage is unavailable."),
+      ).toBeTruthy();
     });
     expect(dispatchMock).not.toHaveBeenCalledWith(
       expect.objectContaining({
@@ -257,11 +263,13 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("logs avatar validation failures when the upload payload is malformed", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("renders avatar validation failures when the upload payload is malformed", async () => {
     authorizedFetchMock.mockResolvedValue({
       ok: true,
       status: 200,
+      headers: new Headers({
+        "content-type": "application/json",
+      }),
       json: async () => ({ invalid: true }),
     });
 
@@ -273,32 +281,70 @@ describe("SettingsPage", () => {
     });
 
     await waitFor(() => {
-      expect(errorSpy).toHaveBeenCalledWith(expect.any(Error));
+      expect(
+        screen.getByText(
+          "Avatar upload completed but the returned avatar payload was invalid.",
+        ),
+      ).toBeTruthy();
     });
+
+    expect(dispatchMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "updateField",
+        payload: expect.objectContaining({ field: "avatar" }),
+      }),
+    );
   });
 
-  it("warns instead of saving when the current user snapshot becomes invalid", async () => {
+  it("renders inline field validation feedback instead of saving when the current user snapshot becomes invalid", async () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const validateSpy = vi.spyOn(userEntitySchema, "validate");
     validateSpy
       .mockImplementation(() => ({
         valid: false,
-        errors: ["forced failure"],
+        errors: [
+          "High PII field must not be empty: email",
+          "High PII field must not be empty: name.firstName",
+          "forced failure",
+        ],
       }) as never);
 
     render(<SettingsPage />);
     infoSpy.mockClear();
-    warnSpy.mockClear();
     validateSpy.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Validation failed",
-      expect.objectContaining({ valid: false }),
-    );
+    expect(screen.getByText("Fix the highlighted fields before saving.")).toBeTruthy();
+    expect(screen.getByText("Email is required.")).toBeTruthy();
+    expect(screen.getByText("First name is required.")).toBeTruthy();
+    expect(screen.getByText("forced failure")).toBeTruthy();
+    expect(screen.getByLabelText("email").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("first_name").getAttribute("aria-invalid")).toBe("true");
     expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
+    validateSpy.mockRestore();
+  });
+
+  it("clears a field validation error after the user edits that field", async () => {
+    const validateSpy = vi.spyOn(userEntitySchema, "validate");
+    validateSpy.mockImplementation(() => ({
+      valid: false,
+      errors: ["High PII field must not be empty: email"],
+    }) as never);
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+    expect(screen.getByText("Email is required.")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("email"), {
+      target: { name: "email", value: "updated@example.com" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Email is required.")).toBeNull();
+    });
+
     validateSpy.mockRestore();
   });
 

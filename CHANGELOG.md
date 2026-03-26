@@ -9,13 +9,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added rendered validation summaries and inline field errors to `SettingsPage` so invalid profile snapshots surface directly in the shared profile editor UI instead of only logging to the console.
 
 - **Changed**
-  - (placeholder)
+  - Legacy avatar uploads in `SettingsPage` now expose upload and malformed-payload failures as inline form feedback with field-level ARIA associations.
 
 - **Fixed**
-  - (placeholder)
+  - Cleared stale submit-time field errors as soon as the affected profile inputs are edited, keeping correction flows visible without forcing a full page reload.
 
 - **Security**
   - (placeholder)

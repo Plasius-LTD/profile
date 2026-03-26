@@ -16,6 +16,118 @@ export interface SettingsPageProps {
   hideAvatarField?: boolean;
 }
 
+type SettingsFieldName =
+  | "avatar"
+  | "name.firstName"
+  | "name.middleName"
+  | "name.lastName"
+  | "name.displayName"
+  | "name.preferredDisplayOrder"
+  | "email"
+  | "emailPreferences";
+
+type SettingsFieldErrors = Partial<Record<SettingsFieldName, string>>;
+
+const SETTINGS_FIELD_NAMES = new Set<SettingsFieldName>([
+  "avatar",
+  "name.firstName",
+  "name.middleName",
+  "name.lastName",
+  "name.displayName",
+  "name.preferredDisplayOrder",
+  "email",
+  "emailPreferences",
+]);
+
+const FIELD_LABELS: Record<Exclude<SettingsFieldName, "avatar">, string> = {
+  "name.firstName": "First name",
+  "name.middleName": "Middle name",
+  "name.lastName": "Last name",
+  "name.displayName": "Display name",
+  "name.preferredDisplayOrder": "Preferred name display",
+  email: "Email",
+  emailPreferences: "Email preferences",
+};
+
+const EMPTY_FIELD_PATTERN = /^High PII field must not be empty: ([a-zA-Z]+(?:\.[a-zA-Z]+)*)$/;
+const DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE =
+  "Avatar upload failed. Try a different image and retry.";
+const INVALID_AVATAR_PAYLOAD_MESSAGE =
+  "Avatar upload completed but the returned avatar payload was invalid.";
+
+function isSettingsFieldName(value: string): value is SettingsFieldName {
+  return SETTINGS_FIELD_NAMES.has(value as SettingsFieldName);
+}
+
+function getFieldNameFromValidationError(error: string): Exclude<SettingsFieldName, "avatar"> | null {
+  const fieldPath = error.match(/:\s*([a-zA-Z]+(?:\.[a-zA-Z]+)*)$/)?.[1] ?? "";
+  if (!isSettingsFieldName(fieldPath) || fieldPath === "avatar") {
+    return null;
+  }
+
+  return fieldPath;
+}
+
+function getFieldValidationMessage(
+  field: Exclude<SettingsFieldName, "avatar">,
+  error: string,
+): string {
+  const emptyFieldMatch = error.match(EMPTY_FIELD_PATTERN);
+  if (emptyFieldMatch?.[1] === field) {
+    return `${FIELD_LABELS[field]} is required.`;
+  }
+
+  return error;
+}
+
+function mapValidationErrors(errors: unknown[] | undefined): {
+  fieldErrors: SettingsFieldErrors;
+  formErrors: string[];
+} {
+  const fieldErrors: SettingsFieldErrors = {};
+  const formErrors: string[] = [];
+
+  for (const rawError of errors ?? []) {
+    const error = String(rawError);
+    const field = getFieldNameFromValidationError(error);
+
+    if (field) {
+      fieldErrors[field] ??= getFieldValidationMessage(field, error);
+      continue;
+    }
+
+    formErrors.push(error);
+  }
+
+  return { fieldErrors, formErrors };
+}
+
+async function readUploadErrorMessage(response: Response): Promise<string | null> {
+  const contentType = response.headers?.get?.("content-type") ?? "";
+
+  if (contentType.toLowerCase().includes("application/json")) {
+    try {
+      const payload = await response.json() as { error?: unknown; message?: unknown };
+      if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+        return payload.error.trim();
+      }
+
+      if (typeof payload.message === "string" && payload.message.trim().length > 0) {
+        return payload.message.trim();
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const text = await response.text();
+    return text.trim().length > 0 ? text.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 const getEmailPreferenceOptions = () =>
   Object.entries(UserEmailPreferences).map(([key, value]) => ({
     label: key.replace(/([a-z])([A-Z])/g, "$1 $2"), // Optional: format nicely
@@ -33,14 +145,39 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   const { t } = useI18n();
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
+  const errorIdPrefix = React.useId();
+  const [avatarError, setAvatarError] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<SettingsFieldErrors>({});
+  const [formErrors, setFormErrors] = React.useState<string[]>([]);
   const selectedEmailPreference = Array.isArray(user?.emailPreferences)
     ? (user.emailPreferences[0] ?? "")
     : "";
+  const hasValidationSummary = Object.keys(fieldErrors).length > 0 || formErrors.length > 0;
+
+  const getFieldErrorId = (field: SettingsFieldName) =>
+    `${errorIdPrefix}-${field.replace(/\./g, "-")}-error`;
+
+  const clearFieldError = (field: Exclude<SettingsFieldName, "avatar">) => {
+    setFieldErrors((currentErrors) => {
+      if (!currentErrors[field]) {
+        return currentErrors;
+      }
+
+      const nextErrors = { ...currentErrors };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    setFormErrors([]);
+
+    if (isSettingsFieldName(name) && name !== "avatar") {
+      clearFieldError(name);
+    }
 
     if (name === "emailPreferences") {
       dispatch({
@@ -74,7 +211,9 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to upload avatar");
+      throw new Error(
+        (await readUploadErrorMessage(response)) ?? DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE,
+      );
     }
 
     const data: unknown = await response.json();
@@ -83,16 +222,21 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setAvatarError("");
+    setFormErrors([]);
 
     try {
       const uploadedAvatar = await uploadAvatar(file);
       const validatedAvatar = userAvatarSchema.validate(uploadedAvatar);
 
       if (!validatedAvatar.valid || validatedAvatar.errors?.length) {
-        throw new Error(
-          (validatedAvatar.errors ?? []).map((e) => String(e)).join("; ")
-        );
+        throw new Error(INVALID_AVATAR_PAYLOAD_MESSAGE);
       }
 
       dispatch({
@@ -103,7 +247,11 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         },
       });
     } catch (err) {
-      console.error(err);
+      setAvatarError(
+        err instanceof Error && err.message
+          ? err.message
+          : DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE,
+      );
     }
   };
 
@@ -111,10 +259,14 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     e.preventDefault();
     const validation = userEntitySchema.validate(user);
     if (!validation.valid || validation.errors?.length) {
-      console.warn("Validation failed", validation);
+      const nextErrors = mapValidationErrors(validation.errors);
+      setFieldErrors(nextErrors.fieldErrors);
+      setFormErrors(nextErrors.formErrors);
       return;
     }
 
+    setFieldErrors({});
+    setFormErrors([]);
     console.info("Saved:", user);
   };
 
@@ -122,17 +274,41 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     <div className={styles.settingsContainer}>
       <form onSubmit={handleSubmit} className={styles.settingsForm}>
         <h2>{t("profile_settings")}</h2>
+        {hasValidationSummary ? (
+          <div className={styles.errorSummary} role="alert" aria-live="polite">
+            <p className={styles.errorSummaryTitle}>
+              Fix the highlighted fields before saving.
+            </p>
+            {formErrors.length > 0 ? (
+              <ul className={styles.errorList}>
+                {formErrors.map((error) => (
+                <li key={error}>{error}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
         {!hideAvatarField ? (
           <>
-            <label className={styles.label}>
-              {t("upload_avatar")}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className={styles.input}
-              />
-            </label>
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>
+                {t("upload_avatar")}
+                <input
+                  type="file"
+                  name="avatar"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className={styles.input}
+                  aria-invalid={avatarError ? "true" : undefined}
+                  aria-describedby={avatarError ? getFieldErrorId("avatar") : undefined}
+                />
+              </label>
+            </div>
+            {avatarError ? (
+              <p id={getFieldErrorId("avatar")} className={styles.fieldError} role="alert">
+                {avatarError}
+              </p>
+            ) : null}
 
             {user?.avatar?.url && (
               <div>
@@ -145,83 +321,194 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
             )}
           </>
         ) : null}
-        <label className={styles.label}>
-          {t("first_name")}
-          <input
-            name="name.firstName"
-            value={user?.name?.firstName ?? ""}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.label}>
-          {t("middle_name")}
-          <input
-            name="name.middleName"
-            value={user?.name?.middleName ?? ""}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.label}>
-          {t("last_name")}
-          <input
-            name="name.lastName"
-            value={user?.name?.lastName ?? ""}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.label}>
-          {t("display_name")}
-          <input
-            name="name.displayName"
-            value={user?.name?.displayName ?? ""}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.label}>
-          {t("preferred_name_display")}
-          <select
-            name="name.preferredDisplayOrder"
-            value={user?.name?.preferredDisplayOrder ?? ""}
-            onChange={handleChange}
-            className={styles.select}
-          >
-            <option value="">{t("select_preference")}</option>
-            {getPreferredDisplayOrder().map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.label}>
-          {t("email")}
-          <input
-            name="email"
-            value={user?.email ?? ""}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </label>
-        <label className={styles.label}>
-          {t("email_preferences")}
-          <select
-            name="emailPreferences"
-            value={selectedEmailPreference}
-            onChange={handleChange}
-            className={styles.select}
-          >
-            <option value="">{t("select_preference")}</option>
-            {getEmailPreferenceOptions().map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("first_name")}
+            <input
+              name="name.firstName"
+              value={user?.name?.firstName ?? ""}
+              onChange={handleChange}
+              className={styles.input}
+              aria-invalid={fieldErrors["name.firstName"] ? "true" : undefined}
+              aria-describedby={
+                fieldErrors["name.firstName"]
+                  ? getFieldErrorId("name.firstName")
+                  : undefined
+              }
+            />
+          </label>
+          {fieldErrors["name.firstName"] ? (
+            <span
+              id={getFieldErrorId("name.firstName")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors["name.firstName"]}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("middle_name")}
+            <input
+              name="name.middleName"
+              value={user?.name?.middleName ?? ""}
+              onChange={handleChange}
+              className={styles.input}
+              aria-invalid={fieldErrors["name.middleName"] ? "true" : undefined}
+              aria-describedby={
+                fieldErrors["name.middleName"]
+                  ? getFieldErrorId("name.middleName")
+                  : undefined
+              }
+            />
+          </label>
+          {fieldErrors["name.middleName"] ? (
+            <span
+              id={getFieldErrorId("name.middleName")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors["name.middleName"]}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("last_name")}
+            <input
+              name="name.lastName"
+              value={user?.name?.lastName ?? ""}
+              onChange={handleChange}
+              className={styles.input}
+              aria-invalid={fieldErrors["name.lastName"] ? "true" : undefined}
+              aria-describedby={
+                fieldErrors["name.lastName"]
+                  ? getFieldErrorId("name.lastName")
+                  : undefined
+              }
+            />
+          </label>
+          {fieldErrors["name.lastName"] ? (
+            <span
+              id={getFieldErrorId("name.lastName")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors["name.lastName"]}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("display_name")}
+            <input
+              name="name.displayName"
+              value={user?.name?.displayName ?? ""}
+              onChange={handleChange}
+              className={styles.input}
+              aria-invalid={fieldErrors["name.displayName"] ? "true" : undefined}
+              aria-describedby={
+                fieldErrors["name.displayName"]
+                  ? getFieldErrorId("name.displayName")
+                  : undefined
+              }
+            />
+          </label>
+          {fieldErrors["name.displayName"] ? (
+            <span
+              id={getFieldErrorId("name.displayName")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors["name.displayName"]}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("preferred_name_display")}
+            <select
+              name="name.preferredDisplayOrder"
+              value={user?.name?.preferredDisplayOrder ?? ""}
+              onChange={handleChange}
+              className={styles.select}
+              aria-invalid={fieldErrors["name.preferredDisplayOrder"] ? "true" : undefined}
+              aria-describedby={
+                fieldErrors["name.preferredDisplayOrder"]
+                  ? getFieldErrorId("name.preferredDisplayOrder")
+                  : undefined
+              }
+            >
+              <option value="">{t("select_preference")}</option>
+              {getPreferredDisplayOrder().map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {fieldErrors["name.preferredDisplayOrder"] ? (
+            <span
+              id={getFieldErrorId("name.preferredDisplayOrder")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors["name.preferredDisplayOrder"]}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("email")}
+            <input
+              name="email"
+              value={user?.email ?? ""}
+              onChange={handleChange}
+              className={styles.input}
+              aria-invalid={fieldErrors.email ? "true" : undefined}
+              aria-describedby={fieldErrors.email ? getFieldErrorId("email") : undefined}
+            />
+          </label>
+          {fieldErrors.email ? (
+            <span id={getFieldErrorId("email")} className={styles.fieldError} role="alert">
+              {fieldErrors.email}
+            </span>
+          ) : null}
+        </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            {t("email_preferences")}
+            <select
+              name="emailPreferences"
+              value={selectedEmailPreference}
+              onChange={handleChange}
+              className={styles.select}
+              aria-invalid={fieldErrors.emailPreferences ? "true" : undefined}
+              aria-describedby={
+                fieldErrors.emailPreferences
+                  ? getFieldErrorId("emailPreferences")
+                  : undefined
+              }
+            >
+              <option value="">{t("select_preference")}</option>
+              {getEmailPreferenceOptions().map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {fieldErrors.emailPreferences ? (
+            <span
+              id={getFieldErrorId("emailPreferences")}
+              className={styles.fieldError}
+              role="alert"
+            >
+              {fieldErrors.emailPreferences}
+            </span>
+          ) : null}
+        </div>
         <button type="submit" className={styles.submitButton}>
           {t("save_settings")}
         </button>

@@ -1,3 +1,58 @@
+.settingsContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.settingsForm {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 40rem);
+}
+
+.fieldGroup {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.input,
+.select {
+  width: 100%;
+}
+
+.submitButton {
+  justify-self: start;
+}
+
+.errorSummary {
+  border: 1px solid #b91c1c;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #7f1d1d;
+  padding: 0.9rem 1rem;
+}
+
+.errorSummaryTitle {
+  margin: 0;
+  font-weight: 700;
+}
+
+.errorList {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.fieldError {
+  color: #b91c1c;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
 .avatarPreview {
   margin-top: 10px;
   border-radius: 50%;
