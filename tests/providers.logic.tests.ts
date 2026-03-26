@@ -81,6 +81,18 @@ describe("UserProvider logic", () => {
     expect(validated.version).toBe("1.0.0");
   });
 
+  it("unwraps graph-shaped user payload envelopes before validation", () => {
+    const validated = ValidateUser({
+      data: createValidUser({ version: 7 as never }),
+      version: 1774518036687,
+      tags: ["profile", "user"],
+    } as unknown as UserEntity);
+
+    expect(validated.id).toBe(VALID_USER_ID);
+    expect(validated.version).toBe("7.0.0");
+    expect(validated.name.displayName).toBe("Alice Smith");
+  });
+
   it("applies userReducer state transitions", () => {
     const user = createValidUser();
     const withUserId = userReducer(initialUserState, {
@@ -242,6 +254,32 @@ describe("UserProvider logic", () => {
       user: expect.objectContaining({
         id: VALID_USER_ID,
         version: "1.0.0",
+      }),
+    });
+  });
+
+  it("unwraps wrapped user payloads returned by load before dispatching", async () => {
+    const dispatch = vi.fn<(action: UserAction) => void>();
+    const fetchMock = vi.fn().mockResolvedValue(
+      okJson({
+        data: createValidUser({ version: 4 as never }),
+        version: Date.now(),
+        tags: ["profile", "user"],
+      }),
+    );
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    await loadOrCreateUserProfile(VALID_USER_ID, fetchMock, dispatch, logger);
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "setUser",
+      user: expect.objectContaining({
+        id: VALID_USER_ID,
+        version: "4.0.0",
       }),
     });
   });

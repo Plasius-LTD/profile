@@ -15,7 +15,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - User hydration now unwraps graph-style `data`/`user`/`profile` envelopes before schema validation so profile settings can render even when upstream transports return wrapped payloads alongside legacy version metadata.
 
 - **Security**
   - (placeholder)

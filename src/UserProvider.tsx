@@ -1,10 +1,58 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import { type UserAvatarEntity, type UserEntity, userEntitySchema } from "@plasius/entity-manager";
+import {
+  PreferredDisplayOrder,
+  type UserAvatarEntity,
+  type UserEntity,
+  userEntitySchema,
+} from "@plasius/entity-manager";
 import { validateUserId } from "@plasius/schema";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { createScopedStoreContext, type IState } from "@plasius/react-state";
 
 const DEFAULT_USER_ENTITY_VERSION = "1.0.0";
+const DEFAULT_FIRST_NAME = "Plasius";
+const DEFAULT_DISPLAY_NAME = "Plasius User";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function unwrapUserEntityCandidate(value: unknown): UserEntity {
+  let current: unknown = value;
+  const visited = new Set<unknown>();
+
+  while (isRecord(current) && !visited.has(current)) {
+    visited.add(current);
+
+    if (isRecord(current.data)) {
+      current = current.data;
+      continue;
+    }
+
+    if (isRecord(current.user)) {
+      current = current.user;
+      continue;
+    }
+
+    if (isRecord(current.profile)) {
+      current = current.profile;
+      continue;
+    }
+
+    break;
+  }
+
+  return (isRecord(current) ? current : {}) as UserEntity;
+}
+
+function normalizeOptionalText(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 function normalizeUserEntityVersion(value: unknown): string {
   if (typeof value === "string") {
@@ -24,11 +72,32 @@ function normalizeUserEntityVersion(value: unknown): string {
   return DEFAULT_USER_ENTITY_VERSION;
 }
 
-export function ValidateUser(user: UserEntity) {
-  const normalizedUser = {
-    ...user,
-    version: normalizeUserEntityVersion(user.version),
+function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
+  const unwrapped = unwrapUserEntityCandidate(user);
+  const firstName = normalizeOptionalText(unwrapped.name?.firstName) ?? DEFAULT_FIRST_NAME;
+  const lastName = normalizeOptionalText(unwrapped.name?.lastName) ?? firstName;
+  const middleName = normalizeOptionalText(unwrapped.name?.middleName);
+  const fallbackDisplayName = `${firstName} ${lastName}`.trim();
+  const displayName =
+    normalizeOptionalText(unwrapped.name?.displayName)
+    ?? (fallbackDisplayName.length > 0 ? fallbackDisplayName : DEFAULT_DISPLAY_NAME);
+
+  return {
+    ...unwrapped,
+    version: normalizeUserEntityVersion(unwrapped.version),
+    name: {
+      firstName,
+      ...(middleName ? { middleName } : {}),
+      lastName,
+      displayName,
+      preferredDisplayOrder:
+        unwrapped.name?.preferredDisplayOrder ?? PreferredDisplayOrder.DISPLAY_NAME,
+    },
   } as UserEntity;
+}
+
+export function ValidateUser(user: UserEntity) {
+  const normalizedUser = normalizeUserEntityCandidate(user);
   const validated = userEntitySchema.validate(normalizedUser);
   if (!validated.valid || !validated.value) {
     throw new Error(
