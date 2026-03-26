@@ -15,6 +15,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.22] - 2026-03-26
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
   - Canonicalized legacy zero-padded user entity versions such as `1.0.01` before schema validation so older stored profiles no longer fail to load.
 
 - **Security**
@@ -248,7 +262,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.21...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.22...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -278,3 +292,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.19]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.19
 [1.0.20]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.20
 [1.0.21]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.21
+[1.0.22]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.22
