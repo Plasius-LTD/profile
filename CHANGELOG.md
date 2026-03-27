@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.28] - 2026-03-27
+
+- **Added**
   - Added an explicit profile-save lifecycle controller with reusable error normalization helpers for pending, success, validation, authorization, and server failure states.
 
 - **Changed**
@@ -321,7 +335,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.26...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.28...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -355,3 +369,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.23]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.23
 [1.0.24]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.24
 [1.0.26]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.26
+[1.0.28]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.28
