@@ -31,6 +31,13 @@ import {
   SettingsProvider,
   UserProvider,
 } from "@plasius/profile";
+
+import {
+  mapUserValidationErrors,
+  UserProfileSaveError,
+} from "@plasius/profile/profile-save";
+
+import type { UserProfileClient } from "@plasius/profile/UserProvider";
 ```
 
 `UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
@@ -64,6 +71,45 @@ const settingsClient: SettingsDataClient = {
 ```
 
 If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius/auth/useAuthorizedFetch`.
+
+## Explicit Save Lifecycle
+
+`SettingsPage` now uses an explicit save lifecycle instead of implicit autosave. Host applications can reuse that lifecycle in custom profile editors through the save provider exported by the package:
+
+```tsx
+import {
+  initialUserState,
+  SettingsPage,
+  UserProfileSaveProvider,
+  UserStore,
+  useUserProfileSave,
+} from "@plasius/profile";
+
+function SaveButton() {
+  const { status, submit } = useUserProfileSave();
+
+  return (
+    <button
+      type="button"
+      disabled={status === "pending"}
+      onClick={() => {
+        void submit();
+      }}
+    >
+      {status === "pending" ? "Saving..." : "Save"}
+    </button>
+  );
+}
+
+<UserStore.Provider initialState={initialUserState}>
+  <UserProfileSaveProvider client={userClient}>
+    <SettingsPage />
+    <SaveButton />
+  </UserProfileSaveProvider>
+</UserStore.Provider>;
+```
+
+Compatibility and graph adapters that only need the save error model can import the lighter-weight save helpers from `@plasius/profile/profile-save` without pulling in the full UI surface.
 
 Profile-specific route shells are also exported so host applications can keep route state locally while reusing package-owned copy and composition:
 

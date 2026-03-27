@@ -9,13 +9,14 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added an explicit profile-save lifecycle controller with reusable error normalization helpers for pending, success, validation, authorization, and server failure states.
 
 - **Changed**
-  - (placeholder)
+  - `UserProvider` now exposes a dedicated save context for explicit submit flows, including duplicate-submit coalescing and slow-save messaging.
+  - Public package exports now include `@plasius/profile/profile-save` and `@plasius/profile/UserProvider` subpaths for non-UI integrations.
 
 - **Fixed**
-  - (placeholder)
+  - Removed duplicate validation-summary copy when save-layer field errors also return the generic summary message.
 
 - **Security**
   - (placeholder)
