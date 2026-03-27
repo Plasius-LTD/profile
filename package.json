@@ -1,6 +1,6 @@
 {
   "name": "@plasius/profile",
-  "version": "1.0.26",
+  "version": "1.0.29",
   "main": "./dist-cjs/index.js",
   "types": "./dist/index.d.ts",
   "private": false,
@@ -34,11 +34,11 @@
   },
   "dependencies": {
     "@plasius/auth": "^1.0.8",
-    "@plasius/entity-manager": "^1.0.10",
+    "@plasius/entity-manager": "^1.0.13",
     "@plasius/environment": "^1.0.10",
     "@plasius/react-query": "^1.0.12",
     "@plasius/react-state": "^1.2.5",
-    "@plasius/schema": "^1.2.6",
+    "@plasius/schema": "^1.2.7",
     "@plasius/sharedcomponents": "^1.0.12",
     "@plasius/translations": "^1.0.11"
   },
@@ -73,6 +73,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist-cjs/index.js"
+    },
+    "./profile-save": {
+      "types": "./dist/profile-save.d.ts",
+      "import": "./dist/profile-save.js",
+      "require": "./dist-cjs/profile-save.js"
     },
     "./package.json": "./package.json"
   },
