@@ -5,17 +5,31 @@ import {
   PreferredDisplayOrder,
   UserEmailPreferences,
   UserNotificationPreferences,
-  userEntitySchema,
   type UserEntity,
 } from "@plasius/entity-manager";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  createValidationSaveError,
+  UserProfileSaveError,
+} from "../src/profile-save.js";
 import { SettingsPage } from "../src/Pages/Settings/index.js";
 
-const { authorizedFetchMock, dispatchMock, storeState } = vi.hoisted(() => ({
+const {
+  authorizedFetchMock,
+  dispatchMock,
+  resetStatusMock,
+  saveSubmitMock,
+  saveState,
+} = vi.hoisted(() => ({
   authorizedFetchMock: vi.fn(),
   dispatchMock: vi.fn(),
-  storeState: {
+  resetStatusMock: vi.fn(),
+  saveSubmitMock: vi.fn(),
+  saveState: {
     user: null as UserEntity | null,
+    status: "idle" as "idle" | "pending" | "success" | "error",
+    isSlow: false,
+    lastSavedAt: null as string | null,
   },
 }));
 
@@ -31,9 +45,16 @@ vi.mock("@plasius/translations", () => ({
 
 vi.mock("../src/UserProvider.js", () => ({
   UserStore: {
-    useStore: () => storeState,
+    useStore: () => ({ user: saveState.user }),
     useDispatch: () => dispatchMock,
   },
+  useUserProfileSave: () => ({
+    status: saveState.status,
+    isSlow: saveState.isSlow,
+    lastSavedAt: saveState.lastSavedAt,
+    submit: saveSubmitMock,
+    resetStatus: resetStatusMock,
+  }),
 }));
 
 function createValidUser(overrides: Partial<UserEntity> = {}): UserEntity {
@@ -81,17 +102,20 @@ describe("SettingsPage", () => {
   beforeEach(() => {
     authorizedFetchMock.mockReset();
     dispatchMock.mockReset();
-    storeState.user = createValidUser();
+    resetStatusMock.mockReset();
+    saveSubmitMock.mockReset();
+    saveSubmitMock.mockResolvedValue(createValidUser());
+    saveState.user = createValidUser();
+    saveState.status = "idle";
+    saveState.isSlow = false;
+    saveState.lastSavedAt = null;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders profile fields, dispatches edits, and logs a valid save", () => {
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
+  it("renders profile fields, dispatches edits, and submits the save request", () => {
     render(<SettingsPage />);
 
     expect(screen.getByRole("heading", { name: "profile_settings" })).toBeTruthy();
@@ -138,11 +162,11 @@ describe("SettingsPage", () => {
         value: [UserEmailPreferences.SECURITY],
       },
     });
+    expect(resetStatusMock).toHaveBeenCalledTimes(4);
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
 
-    expect(infoSpy).toHaveBeenCalledWith("Saved:", storeState.user);
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(saveSubmitMock).toHaveBeenCalledTimes(1);
   });
 
   it("suppresses the legacy avatar field when hideAvatarField is enabled", () => {
@@ -154,7 +178,7 @@ describe("SettingsPage", () => {
   });
 
   it("falls back to an empty email-preference selection when the preference list is empty", () => {
-    storeState.user = createValidUser({ emailPreferences: [] });
+    saveState.user = createValidUser({ emailPreferences: [] });
 
     render(<SettingsPage />);
 
@@ -164,21 +188,15 @@ describe("SettingsPage", () => {
   });
 
   it("falls back to an empty email-preference selection when the stored shape is missing", () => {
-    storeState.user = createValidUser({
+    saveState.user = createValidUser({
       emailPreferences: undefined as unknown as UserEmailPreferences[],
     });
-    const validateSpy = vi.spyOn(userEntitySchema, "validate").mockReturnValue({
-      valid: true,
-      value: storeState.user,
-      errors: [],
-    } as never);
 
     render(<SettingsPage />);
 
     expect(
       (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
     ).toBe("");
-    validateSpy.mockRestore();
   });
 
   it("uploads an avatar and dispatches the persisted avatar entity", async () => {
@@ -274,6 +292,29 @@ describe("SettingsPage", () => {
     );
   });
 
+  it("renders normalized save errors returned by the save controller", async () => {
+    saveSubmitMock.mockRejectedValue(
+      new UserProfileSaveError({
+        message: "Profile validation failed.",
+        category: "validation",
+        fieldErrors: {
+          "name.displayName": "Display name is required.",
+        },
+        formErrors: ["Fix the highlighted fields before saving."],
+      }),
+    );
+
+    render(<SettingsPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Display name is required.")).toBeTruthy();
+    });
+    expect(screen.getByText("Fix the highlighted fields before saving.")).toBeTruthy();
+    expect(screen.getByLabelText("display_name").getAttribute("aria-invalid")).toBe("true");
+  });
+
   it("renders avatar upload failures from a response message payload", async () => {
     authorizedFetchMock.mockResolvedValue({
       ok: false,
@@ -357,65 +398,60 @@ describe("SettingsPage", () => {
     );
   });
 
-  it("renders inline field validation feedback instead of saving when the current user snapshot becomes invalid", async () => {
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    const validateSpy = vi.spyOn(userEntitySchema, "validate");
-    validateSpy
-      .mockImplementation(() => ({
-        valid: false,
-        errors: [
-          "High PII field must not be empty: email",
-          "High PII field must not be empty: name.firstName",
-          "forced failure",
-        ],
-      }) as never);
+  it("renders inline validation feedback returned by the save controller", async () => {
+    saveSubmitMock.mockRejectedValue(
+      createValidationSaveError([
+        "High PII field must not be empty: email",
+        "High PII field must not be empty: name.firstName",
+        "forced failure",
+      ]),
+    );
 
     render(<SettingsPage />);
-    infoSpy.mockClear();
-    validateSpy.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
 
-    expect(screen.getByText("Fix the highlighted fields before saving.")).toBeTruthy();
-    expect(screen.getByText("Email is required.")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("Email is required.")).toBeTruthy();
+    });
     expect(screen.getByText("First name is required.")).toBeTruthy();
     expect(screen.getByText("forced failure")).toBeTruthy();
     expect(screen.getByLabelText("email").getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByLabelText("first_name").getAttribute("aria-invalid")).toBe("true");
-    expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
-    validateSpy.mockRestore();
+    expect(saveSubmitMock).toHaveBeenCalledTimes(1);
   });
 
   it("renders field-scoped validation messages without rewriting non-required errors", async () => {
-    const validateSpy = vi.spyOn(userEntitySchema, "validate");
-    validateSpy.mockImplementation(() => ({
-      valid: false,
-      errors: ["Display name contains unsupported characters: name.displayName"],
-    }) as never);
+    saveSubmitMock.mockRejectedValue(
+      createValidationSaveError([
+        "Display name contains unsupported characters: name.displayName",
+      ]),
+    );
 
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
 
-    expect(
-      screen.getByText("Display name contains unsupported characters: name.displayName"),
-    ).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        screen.getByText("Display name contains unsupported characters: name.displayName"),
+      ).toBeTruthy();
+    });
     expect(screen.getByLabelText("display_name").getAttribute("aria-invalid")).toBe("true");
-
-    validateSpy.mockRestore();
   });
 
   it("clears a field validation error after the user edits that field", async () => {
-    const validateSpy = vi.spyOn(userEntitySchema, "validate");
-    validateSpy.mockImplementation(() => ({
-      valid: false,
-      errors: ["High PII field must not be empty: email"],
-    }) as never);
+    saveSubmitMock.mockRejectedValueOnce(
+      createValidationSaveError(["High PII field must not be empty: email"]),
+    );
 
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
-    expect(screen.getByText("Email is required.")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(screen.getByText("Email is required.")).toBeTruthy();
+    });
 
     fireEvent.change(screen.getByLabelText("email"), {
       target: { name: "email", value: "updated@example.com" },
@@ -424,12 +460,10 @@ describe("SettingsPage", () => {
     await waitFor(() => {
       expect(screen.queryByText("Email is required.")).toBeNull();
     });
-
-    validateSpy.mockRestore();
   });
 
   it("keeps rendering draft input values without throwing when the snapshot is temporarily invalid", () => {
-    storeState.user = createValidUser({
+    saveState.user = createValidUser({
       email: "",
       emailPreferences: "security" as unknown as UserEmailPreferences[],
     });
@@ -439,5 +473,40 @@ describe("SettingsPage", () => {
     expect(
       (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
     ).toBe("");
+  });
+
+  it("disables the save button and renders pending messaging while a save is in flight", () => {
+    saveState.status = "pending";
+
+    render(<SettingsPage />);
+
+    expect(screen.getByText("Saving profile changes...")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Saving profile..." }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("renders the slow-save message once the pending threshold has been exceeded", () => {
+    saveState.status = "pending";
+    saveState.isSlow = true;
+
+    render(<SettingsPage />);
+
+    expect(
+      screen.getByText(
+        "Saving is taking longer than usual. Keep this page open until the profile save completes.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+  });
+
+  it("renders success feedback after a profile save completes", () => {
+    saveState.status = "success";
+    saveState.lastSavedAt = "2026-03-27T18:15:00.000Z";
+
+    render(<SettingsPage />);
+
+    expect(screen.getByText(/Profile changes saved at/)).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
   });
 });

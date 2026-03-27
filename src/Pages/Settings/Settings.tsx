@@ -1,14 +1,17 @@
 import React from "react";
 import type { UserAvatarEntity } from "@plasius/entity-manager";
 import {
-  userEntitySchema,
   userAvatarSchema,
   UserEmailPreferences,
   PreferredDisplayOrder,
 } from "@plasius/entity-manager";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { useI18n } from "@plasius/translations";
-import { UserStore } from "../../UserProvider.js";
+import { UserStore, useUserProfileSave } from "../../UserProvider.js";
+import {
+  normalizeUnknownSaveError,
+  type UserProfileFieldErrors,
+} from "../../profile-save.js";
 
 import styles from "./Settings.module.css";
 
@@ -26,81 +29,11 @@ type SettingsFieldName =
   | "email"
   | "emailPreferences";
 
-type SettingsFieldErrors = Partial<Record<SettingsFieldName, string>>;
-
-const SETTINGS_FIELD_NAMES = new Set<SettingsFieldName>([
-  "avatar",
-  "name.firstName",
-  "name.middleName",
-  "name.lastName",
-  "name.displayName",
-  "name.preferredDisplayOrder",
-  "email",
-  "emailPreferences",
-]);
-
-const FIELD_LABELS: Record<Exclude<SettingsFieldName, "avatar">, string> = {
-  "name.firstName": "First name",
-  "name.middleName": "Middle name",
-  "name.lastName": "Last name",
-  "name.displayName": "Display name",
-  "name.preferredDisplayOrder": "Preferred name display",
-  email: "Email",
-  emailPreferences: "Email preferences",
-};
-
-const EMPTY_FIELD_PATTERN = /^High PII field must not be empty: ([a-zA-Z]+(?:\.[a-zA-Z]+)*)$/;
 const DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE =
   "Avatar upload failed. Try a different image and retry.";
 const INVALID_AVATAR_PAYLOAD_MESSAGE =
   "Avatar upload completed but the returned avatar payload was invalid.";
-
-function isSettingsFieldName(value: string): value is SettingsFieldName {
-  return SETTINGS_FIELD_NAMES.has(value as SettingsFieldName);
-}
-
-function getFieldNameFromValidationError(error: string): Exclude<SettingsFieldName, "avatar"> | null {
-  const fieldPath = error.match(/:\s*([a-zA-Z]+(?:\.[a-zA-Z]+)*)$/)?.[1] ?? "";
-  if (!isSettingsFieldName(fieldPath) || fieldPath === "avatar") {
-    return null;
-  }
-
-  return fieldPath;
-}
-
-function getFieldValidationMessage(
-  field: Exclude<SettingsFieldName, "avatar">,
-  error: string,
-): string {
-  const emptyFieldMatch = error.match(EMPTY_FIELD_PATTERN);
-  if (emptyFieldMatch?.[1] === field) {
-    return `${FIELD_LABELS[field]} is required.`;
-  }
-
-  return error;
-}
-
-function mapValidationErrors(errors: unknown[] | undefined): {
-  fieldErrors: SettingsFieldErrors;
-  formErrors: string[];
-} {
-  const fieldErrors: SettingsFieldErrors = {};
-  const formErrors: string[] = [];
-
-  for (const rawError of errors ?? []) {
-    const error = String(rawError);
-    const field = getFieldNameFromValidationError(error);
-
-    if (field) {
-      fieldErrors[field] ??= getFieldValidationMessage(field, error);
-      continue;
-    }
-
-    formErrors.push(error);
-  }
-
-  return { fieldErrors, formErrors };
-}
+const VALIDATION_SUMMARY_MESSAGE = "Fix the highlighted fields before saving.";
 
 async function readUploadErrorMessage(response: Response): Promise<string | null> {
   const contentType = response.headers?.get?.("content-type") ?? "";
@@ -145,14 +78,30 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   const { t } = useI18n();
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
+  const { status, isSlow, lastSavedAt, resetStatus, submit } = useUserProfileSave();
   const errorIdPrefix = React.useId();
   const [avatarError, setAvatarError] = React.useState("");
-  const [fieldErrors, setFieldErrors] = React.useState<SettingsFieldErrors>({});
+  const [fieldErrors, setFieldErrors] = React.useState<UserProfileFieldErrors>({});
   const [formErrors, setFormErrors] = React.useState<string[]>([]);
   const selectedEmailPreference = Array.isArray(user?.emailPreferences)
     ? (user.emailPreferences[0] ?? "")
     : "";
-  const hasValidationSummary = Object.keys(fieldErrors).length > 0 || formErrors.length > 0;
+  const visibleFormErrors = Object.keys(fieldErrors).length > 0
+    ? formErrors.filter((error) => error !== VALIDATION_SUMMARY_MESSAGE)
+    : formErrors;
+  const hasValidationSummary =
+    Object.keys(fieldErrors).length > 0 || visibleFormErrors.length > 0;
+  const isPending = status === "pending";
+  const isSuccessful = status === "success";
+  const pendingMessage = isSlow
+    ? "Saving is taking longer than usual. Keep this page open until the profile save completes."
+    : "Saving profile changes...";
+  const successMessage = lastSavedAt
+    ? `Profile changes saved at ${new Date(lastSavedAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}.`
+    : "Profile changes saved.";
 
   const getFieldErrorId = (field: SettingsFieldName) =>
     `${errorIdPrefix}-${field.replace(/\./g, "-")}-error`;
@@ -174,9 +123,10 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   ) => {
     const { name, value } = e.target;
     setFormErrors([]);
+    resetStatus();
 
-    if (isSettingsFieldName(name) && name !== "avatar") {
-      clearFieldError(name);
+    if (name !== "avatar" && (name === "email" || name === "emailPreferences" || name.startsWith("name."))) {
+      clearFieldError(name as Exclude<SettingsFieldName, "avatar">);
     }
 
     if (name === "emailPreferences") {
@@ -230,6 +180,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
 
     setAvatarError("");
     setFormErrors([]);
+    resetStatus();
 
     try {
       const uploadedAvatar = await uploadAvatar(file);
@@ -255,33 +206,41 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validation = userEntitySchema.validate(user);
-    if (!validation.valid || validation.errors?.length) {
-      const nextErrors = mapValidationErrors(validation.errors);
-      setFieldErrors(nextErrors.fieldErrors);
-      setFormErrors(nextErrors.formErrors);
-      return;
-    }
-
     setFieldErrors({});
     setFormErrors([]);
-    console.info("Saved:", user);
+
+    try {
+      await submit();
+    } catch (error) {
+      const saveError = normalizeUnknownSaveError(error);
+      setFieldErrors(saveError.fieldErrors);
+      setFormErrors(
+        saveError.formErrors.length > 0
+          ? saveError.formErrors
+          : [saveError.message || "Profile save failed."],
+      );
+    }
   };
 
   return (
     <div className={styles.settingsContainer}>
       <form onSubmit={handleSubmit} className={styles.settingsForm}>
         <h2>{t("profile_settings")}</h2>
+        {isPending || isSuccessful ? (
+          <div className={styles.statusNotice} role="status" aria-live="polite">
+            {isPending ? pendingMessage : successMessage}
+          </div>
+        ) : null}
         {hasValidationSummary ? (
           <div className={styles.errorSummary} role="alert" aria-live="polite">
             <p className={styles.errorSummaryTitle}>
-              Fix the highlighted fields before saving.
+              {VALIDATION_SUMMARY_MESSAGE}
             </p>
-            {formErrors.length > 0 ? (
+            {visibleFormErrors.length > 0 ? (
               <ul className={styles.errorList}>
-                {formErrors.map((error) => (
+                {visibleFormErrors.map((error) => (
                 <li key={error}>{error}</li>
                 ))}
               </ul>
@@ -509,8 +468,8 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
             </span>
           ) : null}
         </div>
-        <button type="submit" className={styles.submitButton}>
-          {t("save_settings")}
+        <button type="submit" className={styles.submitButton} disabled={isPending}>
+          {isPending ? "Saving profile..." : t("save_settings")}
         </button>
       </form>
     </div>

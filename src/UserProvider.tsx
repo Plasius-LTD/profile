@@ -1,4 +1,12 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   baseEntitySchema,
   PreferredDisplayOrder,
@@ -11,11 +19,18 @@ import {
 import { validateUserId } from "@plasius/schema";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { createScopedStoreContext, type IState } from "@plasius/react-state";
+import {
+  createValidationSaveError,
+  isUserEntityLike,
+  normalizeUnknownSaveError,
+  UserProfileSaveError,
+  type UserProfileSaveStatus,
+} from "./profile-save.js";
 
 const DEFAULT_USER_ENTITY_VERSION = "1.0.0";
 const DEFAULT_FIRST_NAME = "Plasius";
 const DEFAULT_DISPLAY_NAME = "Plasius User";
-const USER_PROFILE_AUTO_SAVE_DELAY_MS = 750;
+const USER_PROFILE_SLOW_SAVE_THRESHOLD_MS = 1_200;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -256,6 +271,25 @@ export const initialUserState: UserState = {
 
 export const UserStore = createScopedStoreContext(userReducer, initialUserState);
 
+export interface UserProfileSaveContextValue {
+  status: UserProfileSaveStatus;
+  isSlow: boolean;
+  lastSavedAt: string | null;
+  submit: () => Promise<UserEntity>;
+  resetStatus: () => void;
+}
+
+const UserProfileSaveContext = createContext<UserProfileSaveContextValue | null>(null);
+
+export function useUserProfileSave(): UserProfileSaveContextValue {
+  const context = useContext(UserProfileSaveContext);
+  if (!context) {
+    throw new Error("useUserProfileSave must be used within a UserProfileSaveProvider.");
+  }
+
+  return context;
+}
+
 type AuthorizedFetch = (
   input: string,
   init?: {
@@ -275,7 +309,7 @@ type UserLogger = Pick<Console, "info" | "warn" | "error">;
 export interface UserProfileClient {
   load(userId: string): Promise<UserEntity | null>;
   create(userId: string): Promise<UserEntity>;
-  save(user: UserEntity): Promise<void>;
+  save(user: UserEntity): Promise<UserEntity | void>;
 }
 
 function isUserProfileClient(
@@ -345,9 +379,9 @@ export async function saveUserProfile(
   user: UserEntity | undefined,
   clientOrFetch: AuthorizedFetch | UserProfileClient,
   logger: UserLogger = console
-): Promise<boolean> {
+) : Promise<UserEntity | null> {
   if (!user) {
-    return false;
+    return null;
   }
 
   try {
@@ -357,12 +391,12 @@ export async function saveUserProfile(
       throw new Error("Invalid user id for save.");
     }
     const client = resolveUserProfileClient(clientOrFetch);
-    await client.save(validatedUser);
+    const savedUser = await client.save(validatedUser);
     logger.info("✅ User profile saved successfully.");
-    return true;
+    return isUserEntityLike(savedUser) ? ValidateUser(savedUser) : validatedUser;
   } catch (err) {
     logger.error("❌ Error saving user profile:", err);
-    return false;
+    return null;
   }
 }
 
@@ -404,7 +438,7 @@ export const UserProvider = ({ children, client }: UserProviderProps) => {
   return (
     <UserStore.Provider>
       <UserInitializer client={client} />
-      {children}
+      <UserProfileSaveProvider client={client}>{children}</UserProfileSaveProvider>
     </UserStore.Provider>
   );
 };
@@ -412,76 +446,137 @@ export const UserProvider = ({ children, client }: UserProviderProps) => {
 const UserInitializer = ({ client }: { client?: UserProfileClient }) => {
   const authorizedFetch = useAuthorizedFetch();
   const dispatch = UserStore.useDispatch();
-  const { userId, user } = UserStore.useStore();
-  const hasHydratedUserRef = useRef(false);
-  const lastSavedSnapshotRef = useRef<string | null>(null);
+  const { userId } = UserStore.useStore();
   const userProfileClient = useMemo(
     () => client ?? createHttpUserProfileClient(authorizedFetch),
     [authorizedFetch, client],
   );
 
   useEffect(() => {
-    let cancelled = false;
-
-    hasHydratedUserRef.current = false;
-    lastSavedSnapshotRef.current = null;
-
     if (!userId) {
-      return () => {
-        cancelled = true;
-      };
+      return;
     }
 
-    void loadOrCreateUserProfile(userId, userProfileClient, dispatch).then((loadedUser) => {
-      if (cancelled || !loadedUser) {
-        return;
-      }
-
-      hasHydratedUserRef.current = true;
-      lastSavedSnapshotRef.current = JSON.stringify(loadedUser);
-    });
-
-    return () => {
-      cancelled = true;
-    };
+    void loadOrCreateUserProfile(userId, userProfileClient, dispatch);
   }, [userId, userProfileClient, dispatch]);
-
-  useEffect(() => {
-    if (!userId || !user) {
-      return;
-    }
-
-    let validatedUser: UserEntity;
-    try {
-      validatedUser = ValidateUser(user);
-    } catch {
-      return;
-    }
-
-    const nextSnapshot = JSON.stringify(validatedUser);
-
-    if (!hasHydratedUserRef.current) {
-      hasHydratedUserRef.current = true;
-      lastSavedSnapshotRef.current = nextSnapshot;
-      return;
-    }
-
-    if (nextSnapshot === lastSavedSnapshotRef.current) {
-      return;
-    }
-
-    const timeoutId = globalThis.setTimeout(() => {
-      void saveUserProfile(validatedUser, userProfileClient).then((saved) => {
-        if (saved) {
-          lastSavedSnapshotRef.current = nextSnapshot;
-        }
-      });
-    }, USER_PROFILE_AUTO_SAVE_DELAY_MS);
-
-    return () => {
-      globalThis.clearTimeout(timeoutId);
-    };
-  }, [user, userId, userProfileClient]);
 
   return null;
 };
+
+export function UserProfileSaveProvider({
+  children,
+  client,
+}: {
+  children: React.ReactNode;
+  client?: UserProfileClient;
+}) {
+  const authorizedFetch = useAuthorizedFetch();
+  const dispatch = UserStore.useDispatch();
+  const { user } = UserStore.useStore();
+  const [status, setStatus] = useState<UserProfileSaveStatus>("idle");
+  const [isSlow, setIsSlow] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const savePromiseRef = useRef<Promise<UserEntity> | null>(null);
+  const userProfileClient = useMemo(
+    () => client ?? createHttpUserProfileClient(authorizedFetch),
+    [authorizedFetch, client],
+  );
+
+  const resetStatus = useCallback(() => {
+    setStatus((currentStatus) => (currentStatus === "pending" ? currentStatus : "idle"));
+    setIsSlow(false);
+  }, []);
+
+  const submit = useCallback(async (): Promise<UserEntity> => {
+    if (savePromiseRef.current) {
+      return savePromiseRef.current;
+    }
+
+    const currentUser = user;
+    let validatedUser: UserEntity;
+
+    try {
+      validatedUser = ValidateUser(currentUser as UserEntity);
+    } catch (error) {
+      const saveError = normalizeUnknownSaveError(error);
+      setStatus("error");
+      throw saveError;
+    }
+
+    const targetUserId = typeof validatedUser.id === "string" ? validatedUser.id : "";
+    if (!validateUserId(targetUserId)) {
+      const saveError = new UserProfileSaveError({
+        message: "Invalid user id for save.",
+        category: "validation",
+        formErrors: ["Profile save could not start because the user id is invalid."],
+      });
+      setStatus("error");
+      throw saveError;
+    }
+
+    const validation = userEntitySchema.validate(validatedUser);
+    if (!validation.valid || !validation.value) {
+      const saveError = createValidationSaveError(validation.errors);
+      setStatus("error");
+      throw saveError;
+    }
+
+    const saveOperation = (async () => {
+      setStatus("pending");
+      setIsSlow(false);
+      const slowTimerId = globalThis.setTimeout(() => {
+        setIsSlow(true);
+      }, USER_PROFILE_SLOW_SAVE_THRESHOLD_MS);
+
+      try {
+        const savedUser = await userProfileClient.save(validation.value as unknown as UserEntity);
+        const persistedUser = isUserEntityLike(savedUser)
+          ? ValidateUser(savedUser)
+          : await userProfileClient.load(targetUserId);
+
+        if (!persistedUser) {
+          throw new UserProfileSaveError({
+            message: "Profile save completed but the updated profile could not be reloaded.",
+            category: "server",
+            formErrors: [
+              "Profile save completed but the updated profile could not be confirmed. Refresh and verify your changes.",
+            ],
+          });
+        }
+
+        dispatch({ type: "setUser", user: persistedUser });
+        setStatus("success");
+        setLastSavedAt(new Date().toISOString());
+        return persistedUser;
+      } catch (error) {
+        const saveError = normalizeUnknownSaveError(error);
+        setStatus("error");
+        throw saveError;
+      } finally {
+        globalThis.clearTimeout(slowTimerId);
+        setIsSlow(false);
+        savePromiseRef.current = null;
+      }
+    })();
+
+    savePromiseRef.current = saveOperation;
+    return saveOperation;
+  }, [dispatch, user, userProfileClient]);
+
+  const value = useMemo<UserProfileSaveContextValue>(
+    () => ({
+      status,
+      isSlow,
+      lastSavedAt,
+      submit,
+      resetStatus,
+    }),
+    [isSlow, lastSavedAt, resetStatus, status, submit],
+  );
+
+  return (
+    <UserProfileSaveContext.Provider value={value}>
+      {children}
+    </UserProfileSaveContext.Provider>
+  );
+}

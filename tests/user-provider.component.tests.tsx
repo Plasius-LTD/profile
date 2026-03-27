@@ -9,7 +9,7 @@ import {
   type UserEntity,
 } from "@plasius/entity-manager";
 import { describe, expect, it, vi } from "vitest";
-import { UserProvider, UserStore } from "../src/UserProvider.js";
+import { UserProvider, UserStore, useUserProfileSave } from "../src/UserProvider.js";
 
 const { authorizedFetchMock } = vi.hoisted(() => ({
   authorizedFetchMock: vi.fn(),
@@ -52,7 +52,9 @@ function createValidUser(overrides: Partial<UserEntity> = {}): UserEntity {
 function ProviderHarness() {
   const dispatch = UserStore.useDispatch();
   const { user } = UserStore.useStore();
+  const { submit, status } = useUserProfileSave();
   const didEditRef = useRef(false);
+  const didSaveRef = useRef(false);
 
   useEffect(() => {
     dispatch({ type: "setUserId", userId: VALID_USER_ID });
@@ -73,15 +75,24 @@ function ProviderHarness() {
     });
   }, [dispatch, user]);
 
-  return <div>{user?.email ?? "loading"}</div>;
+  useEffect(() => {
+    if (!user || user.email !== "updated@example.com" || didSaveRef.current) {
+      return;
+    }
+
+    didSaveRef.current = true;
+    void submit();
+  }, [submit, user]);
+
+  return <div>{`${user?.email ?? "loading"}:${status}`}</div>;
 }
 
 describe("UserProvider component lifecycle", () => {
-  it("loads once and debounced-saves edited user state without reloading in a loop", async () => {
+  it("loads once and saves edited user state only when submit is invoked", async () => {
     const client = {
       load: vi.fn().mockResolvedValue(createValidUser()),
       create: vi.fn(),
-      save: vi.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue(createValidUser({ email: "updated@example.com" })),
     };
 
     render(
@@ -91,20 +102,11 @@ describe("UserProvider component lifecycle", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("updated@example.com")).toBeTruthy();
+      expect(screen.getByText("updated@example.com:success")).toBeTruthy();
     });
 
     expect(client.load).toHaveBeenCalledTimes(1);
-    expect(client.save).not.toHaveBeenCalled();
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 900);
-    });
-
-    await waitFor(() => {
-      expect(client.save).toHaveBeenCalledTimes(1);
-    });
-
+    expect(client.save).toHaveBeenCalledTimes(1);
     expect(client.load).toHaveBeenCalledTimes(1);
   });
 });

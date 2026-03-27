@@ -74,6 +74,16 @@
       "import": "./dist/index.js",
       "require": "./dist-cjs/index.js"
     },
+    "./profile-save": {
+      "types": "./dist/profile-save.d.ts",
+      "import": "./dist/profile-save.js",
+      "require": "./dist-cjs/profile-save.js"
+    },
+    "./UserProvider": {
+      "types": "./dist/UserProvider.d.ts",
+      "import": "./dist/UserProvider.js",
+      "require": "./dist-cjs/UserProvider.js"
+    },
     "./package.json": "./package.json"
   },
   "module": "./dist/index.js",
