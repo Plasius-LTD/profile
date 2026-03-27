@@ -39,6 +39,13 @@ vi.mock("../src/UserProvider.js", () => ({
     useStore: () => storeState,
     useDispatch: () => dispatchMock,
   },
+  useUserProfileSave: () => ({
+    status: "idle",
+    isSlow: false,
+    lastSavedAt: null,
+    submit: vi.fn(),
+    resetStatus: vi.fn(),
+  }),
 }));
 
 function createUser(overrides: Partial<UserEntity> = {}): UserEntity {

@@ -22,6 +22,10 @@ import {
   userReducer,
   type UserAction,
 } from "../src/UserProvider.js";
+import {
+  normalizeUnknownSaveError,
+  UserProfileSaveError,
+} from "../src/profile-save.js";
 
 const VALID_USER_ID = "123456789012345678901";
 const VALID_PARTITION_KEY = "tenant-001";
@@ -68,6 +72,18 @@ function okJson(payload: unknown): {
 }
 
 describe("UserProvider logic", () => {
+  it("normalizes unknown save errors into typed save errors", () => {
+    const runtimeError = new Error("Network unreachable");
+    const normalizedRuntimeError = normalizeUnknownSaveError(runtimeError);
+    const normalizedStringError = normalizeUnknownSaveError("Save timed out");
+
+    expect(normalizedRuntimeError).toBeInstanceOf(UserProfileSaveError);
+    expect(normalizedRuntimeError.message).toBe("Network unreachable");
+    expect((normalizedRuntimeError as Error & { cause?: unknown }).cause).toBe(runtimeError);
+    expect(normalizedStringError.message).toBe("Save timed out");
+    expect((normalizedStringError as Error & { cause?: unknown }).cause).toBe("Save timed out");
+  });
+
   it("validates user payloads", () => {
     const validated = ValidateUser(createValidUser());
     expect(validated.id).toBe(VALID_USER_ID);
