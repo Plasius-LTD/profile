@@ -1,5 +1,6 @@
 export * from "./UserProvider.js";
 export * from "./SettingsProvider.js";
+export * from "./accessibility.js";
 export * from "./profile-save.js";
 export * from "./Pages/Settings/index.js";
 export * from "./components/avatar-upload-panel/index.js";

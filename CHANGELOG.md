@@ -9,13 +9,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Exported reusable accessibility helpers for stable field labeling/error associations and destructive-action semantics so host profile/account flows can stay aligned with the package-owned settings surface.
 
 - **Changed**
-  - (placeholder)
+  - `SettingsPage` and `AvatarUploadPanel` now consume shared accessibility bindings instead of duplicating ad hoc ARIA wiring.
 
 - **Fixed**
-  - (placeholder)
+  - Package accessibility coverage now verifies reusable destructive-action affordance semantics alongside field-level validation and live-announcement behavior.
 
 - **Security**
   - (placeholder)
