@@ -19,12 +19,27 @@ const DEFAULT_DESTRUCTIVE_HINT =
   "This action is destructive. Confirm the target and consequences before continuing.";
 
 function normalizeIdSegment(value: string): string {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  const normalizedChars: string[] = [];
+  let pendingSeparator = false;
 
+  for (const character of value.trim().toLowerCase()) {
+    const code = character.charCodeAt(0);
+    const isAsciiDigit = code >= 48 && code <= 57;
+    const isAsciiLowercaseLetter = code >= 97 && code <= 122;
+
+    if (isAsciiDigit || isAsciiLowercaseLetter) {
+      if (pendingSeparator && normalizedChars.length > 0) {
+        normalizedChars.push("-");
+      }
+      normalizedChars.push(character);
+      pendingSeparator = false;
+      continue;
+    }
+
+    pendingSeparator = normalizedChars.length > 0;
+  }
+
+  const normalized = normalizedChars.join("");
   return normalized.length > 0 ? normalized : "field";
 }
 
