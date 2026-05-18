@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type CSSProperties, type ChangeEvent } from "react";
 import type { UserAvatarEntity } from "@plasius/entity-manager";
 import { UserStore } from "../../UserProvider.js";
+import { createAccessibleFieldBindings } from "../../accessibility.js";
 import { avatarUploadAccessibilityTheme } from "./accessibilityTheme.js";
 import styles from "./AvatarUploadPanel.module.css";
 
@@ -77,10 +78,7 @@ export function AvatarUploadPanel({
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const titleId = useId();
-  const constraintsId = useId();
   const previewDescriptionId = useId();
-  const statusId = useId();
-  const errorId = useId();
   const [uploadError, setUploadError] = useState<string>("");
   const [uploadMessage, setUploadMessage] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -162,11 +160,17 @@ export function AvatarUploadPanel({
   const currentAvatarUrl =
     user?.avatar && typeof user.avatar.url === "string" ? user.avatar.url : "";
   const previewUrl = localPreviewUrl ?? currentAvatarUrl;
+  const fieldAccessibility = createAccessibleFieldBindings({
+    idPrefix: titleId,
+    name: "avatar-upload",
+    description: constraintsDescription,
+    error: uploadError,
+    liveMessage: uploadMessage,
+    invalid: Boolean(uploadError),
+  });
   const inputDescribedBy = [
-    constraintsId,
+    fieldAccessibility.inputProps["aria-describedby"],
     previewDescriptionId,
-    uploadMessage ? statusId : "",
-    uploadError ? errorId : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -182,7 +186,7 @@ export function AvatarUploadPanel({
         <h3 id={titleId} className={styles.avatarPanelTitle}>
           {title}
         </h3>
-        <p id={constraintsId} className={styles.avatarPanelSummary}>
+        <p className={styles.avatarPanelSummary} {...fieldAccessibility.descriptionProps}>
           {constraintsDescription}
         </p>
       </div>
@@ -194,9 +198,8 @@ export function AvatarUploadPanel({
           accept={accept}
           className={styles.avatarUploadInput}
           disabled={isUploading}
+          {...fieldAccessibility.inputProps}
           aria-describedby={inputDescribedBy || undefined}
-          aria-errormessage={uploadError ? errorId : undefined}
-          aria-invalid={uploadError ? "true" : undefined}
           onChange={handleAvatarUpload}
         />
       </label>
@@ -231,18 +234,13 @@ export function AvatarUploadPanel({
       )}
 
       {uploadMessage ? (
-        <p
-          id={statusId}
-          className={styles.avatarStatus}
-          role="status"
-          aria-live="polite"
-        >
+        <p className={styles.avatarStatus} {...fieldAccessibility.liveMessageProps}>
           {uploadMessage}
         </p>
       ) : null}
 
       {uploadError ? (
-        <p id={errorId} className={styles.avatarError} role="alert">
+        <p className={styles.avatarError} {...fieldAccessibility.errorProps}>
           {uploadError}
         </p>
       ) : null}

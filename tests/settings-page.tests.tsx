@@ -380,8 +380,14 @@ describe("SettingsPage", () => {
     expect(screen.getByText("Email is required.")).toBeTruthy();
     expect(screen.getByText("First name is required.")).toBeTruthy();
     expect(screen.getByText("forced failure")).toBeTruthy();
-    expect(screen.getByLabelText("email").getAttribute("aria-invalid")).toBe("true");
-    expect(screen.getByLabelText("first_name").getAttribute("aria-invalid")).toBe("true");
+    const emailInput = screen.getByLabelText("email");
+    const firstNameInput = screen.getByLabelText("first_name");
+    expect(emailInput.getAttribute("aria-invalid")).toBe("true");
+    expect(emailInput.getAttribute("aria-errormessage")).toMatch(/-email-error$/);
+    expect(firstNameInput.getAttribute("aria-invalid")).toBe("true");
+    expect(firstNameInput.getAttribute("aria-errormessage")).toMatch(
+      /-name-firstname-error$/,
+    );
     expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
     validateSpy.mockRestore();
   });
