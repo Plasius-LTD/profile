@@ -27,6 +27,15 @@ describe("accessibility bindings", () => {
     expect(binding.inputProps["aria-invalid"]).toBe(true);
   });
 
+  it("normalizes noisy field names without regex backtracking risk", () => {
+    const binding = createAccessibleFieldBindings({
+      idPrefix: "profile-settings",
+      name: "---Display---Name---",
+    });
+
+    expect(binding.descriptionId).toBe("profile-settings-display-name-description");
+  });
+
   it("adds reusable destructive-action semantics for host consumers", () => {
     const binding = createAccessibleActionBindings({
       idPrefix: "profile-settings",

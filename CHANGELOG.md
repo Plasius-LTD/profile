@@ -18,7 +18,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Package accessibility coverage now verifies reusable destructive-action affordance semantics alongside field-level validation and live-announcement behavior.
 
 - **Security**
-  - (placeholder)
+  - Replaced regex-based accessibility ID normalization with a linear scanner to avoid slow matching on repeated separators.
 
 ## [1.0.33] - 2026-05-13
 
