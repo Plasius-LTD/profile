@@ -30,6 +30,8 @@ import {
   ProfileRouteStatusPanel,
   SettingsProvider,
   UserProvider,
+  createAccessibleActionBindings,
+  createAccessibleFieldBindings,
 } from "@plasius/profile";
 ```
 
@@ -77,6 +79,26 @@ Profile-specific route shells are also exported so host applications can keep ro
   onRetry={() => refetchProfile()}
 />
 ```
+
+For host-owned profile/account controls, the package also exports accessibility helpers so consumers can keep stable field and action semantics aligned with the shared settings surfaces:
+
+```ts
+const fieldA11y = createAccessibleFieldBindings({
+  idPrefix: "profile-delete",
+  name: "confirmation-text",
+  description: "Type DELETE to confirm account removal.",
+  error: confirmationError,
+});
+
+const actionA11y = createAccessibleActionBindings({
+  idPrefix: "profile-delete",
+  action: "delete-account",
+  description: "Deleting your account starts a grace period before permanent removal.",
+  intent: "destructive",
+});
+```
+
+The package task for feature `Plasius-LTD/plasius-ltd-site#706` inherits the parent rollout flag `profile.account.accessibility.enabled`; host applications remain responsible for evaluating that flag and deciding when to expose new accessibility-hardened flows.
 
 ## Development
 

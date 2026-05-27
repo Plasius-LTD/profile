@@ -9,6 +9,7 @@ import {
 import { useAuthorizedFetch } from "@plasius/auth";
 import { useI18n } from "@plasius/translations";
 import { UserStore } from "../../UserProvider.js";
+import { createAccessibleFieldBindings } from "../../accessibility.js";
 
 import styles from "./Settings.module.css";
 
@@ -153,9 +154,34 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     ? (user.emailPreferences[0] ?? "")
     : "";
   const hasValidationSummary = Object.keys(fieldErrors).length > 0 || formErrors.length > 0;
-
-  const getFieldErrorId = (field: SettingsFieldName) =>
-    `${errorIdPrefix}-${field.replace(/\./g, "-")}-error`;
+  const avatarFieldAccessibility = createAccessibleFieldBindings({
+    idPrefix: errorIdPrefix,
+    name: "avatar",
+    error: avatarError,
+    invalid: Boolean(avatarError),
+  });
+  const firstNameFieldAccessibility = createAccessibleFieldBindings({
+    idPrefix: errorIdPrefix,
+    name: "name.firstName",
+    error: fieldErrors["name.firstName"],
+    invalid: Boolean(fieldErrors["name.firstName"]),
+  });
+  const getFieldAccessibility = (
+    field: SettingsFieldName,
+    options?: {
+      description?: string;
+      error?: string;
+      liveMessage?: string;
+    },
+  ) =>
+    createAccessibleFieldBindings({
+      idPrefix: errorIdPrefix,
+      name: field,
+      description: options?.description,
+      error: options?.error,
+      liveMessage: options?.liveMessage,
+      invalid: Boolean(options?.error),
+    });
 
   const clearFieldError = (field: Exclude<SettingsFieldName, "avatar">) => {
     setFieldErrors((currentErrors) => {
@@ -299,13 +325,12 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
                   accept="image/*"
                   onChange={handleAvatarChange}
                   className={styles.input}
-                  aria-invalid={avatarError ? "true" : undefined}
-                  aria-describedby={avatarError ? getFieldErrorId("avatar") : undefined}
+                  {...avatarFieldAccessibility.inputProps}
                 />
               </label>
             </div>
             {avatarError ? (
-              <p id={getFieldErrorId("avatar")} className={styles.fieldError} role="alert">
+              <p className={styles.fieldError} {...avatarFieldAccessibility.errorProps}>
                 {avatarError}
               </p>
             ) : null}
@@ -329,20 +354,11 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.name?.firstName ?? ""}
               onChange={handleChange}
               className={styles.input}
-              aria-invalid={fieldErrors["name.firstName"] ? "true" : undefined}
-              aria-describedby={
-                fieldErrors["name.firstName"]
-                  ? getFieldErrorId("name.firstName")
-                  : undefined
-              }
+              {...firstNameFieldAccessibility.inputProps}
             />
           </label>
           {fieldErrors["name.firstName"] ? (
-            <span
-              id={getFieldErrorId("name.firstName")}
-              className={styles.fieldError}
-              role="alert"
-            >
+            <span className={styles.fieldError} {...firstNameFieldAccessibility.errorProps}>
               {fieldErrors["name.firstName"]}
             </span>
           ) : null}
@@ -355,19 +371,17 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.name?.middleName ?? ""}
               onChange={handleChange}
               className={styles.input}
-              aria-invalid={fieldErrors["name.middleName"] ? "true" : undefined}
-              aria-describedby={
-                fieldErrors["name.middleName"]
-                  ? getFieldErrorId("name.middleName")
-                  : undefined
-              }
+              {...getFieldAccessibility("name.middleName", {
+                error: fieldErrors["name.middleName"],
+              }).inputProps}
             />
           </label>
           {fieldErrors["name.middleName"] ? (
             <span
-              id={getFieldErrorId("name.middleName")}
               className={styles.fieldError}
-              role="alert"
+              {...getFieldAccessibility("name.middleName", {
+                error: fieldErrors["name.middleName"],
+              }).errorProps}
             >
               {fieldErrors["name.middleName"]}
             </span>
@@ -381,19 +395,17 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.name?.lastName ?? ""}
               onChange={handleChange}
               className={styles.input}
-              aria-invalid={fieldErrors["name.lastName"] ? "true" : undefined}
-              aria-describedby={
-                fieldErrors["name.lastName"]
-                  ? getFieldErrorId("name.lastName")
-                  : undefined
-              }
+              {...getFieldAccessibility("name.lastName", {
+                error: fieldErrors["name.lastName"],
+              }).inputProps}
             />
           </label>
           {fieldErrors["name.lastName"] ? (
             <span
-              id={getFieldErrorId("name.lastName")}
               className={styles.fieldError}
-              role="alert"
+              {...getFieldAccessibility("name.lastName", {
+                error: fieldErrors["name.lastName"],
+              }).errorProps}
             >
               {fieldErrors["name.lastName"]}
             </span>
@@ -407,19 +419,17 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.name?.displayName ?? ""}
               onChange={handleChange}
               className={styles.input}
-              aria-invalid={fieldErrors["name.displayName"] ? "true" : undefined}
-              aria-describedby={
-                fieldErrors["name.displayName"]
-                  ? getFieldErrorId("name.displayName")
-                  : undefined
-              }
+              {...getFieldAccessibility("name.displayName", {
+                error: fieldErrors["name.displayName"],
+              }).inputProps}
             />
           </label>
           {fieldErrors["name.displayName"] ? (
             <span
-              id={getFieldErrorId("name.displayName")}
               className={styles.fieldError}
-              role="alert"
+              {...getFieldAccessibility("name.displayName", {
+                error: fieldErrors["name.displayName"],
+              }).errorProps}
             >
               {fieldErrors["name.displayName"]}
             </span>
@@ -433,12 +443,9 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.name?.preferredDisplayOrder ?? ""}
               onChange={handleChange}
               className={styles.select}
-              aria-invalid={fieldErrors["name.preferredDisplayOrder"] ? "true" : undefined}
-              aria-describedby={
-                fieldErrors["name.preferredDisplayOrder"]
-                  ? getFieldErrorId("name.preferredDisplayOrder")
-                  : undefined
-              }
+              {...getFieldAccessibility("name.preferredDisplayOrder", {
+                error: fieldErrors["name.preferredDisplayOrder"],
+              }).inputProps}
             >
               <option value="">{t("select_preference")}</option>
               {getPreferredDisplayOrder().map((opt) => (
@@ -450,9 +457,10 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           </label>
           {fieldErrors["name.preferredDisplayOrder"] ? (
             <span
-              id={getFieldErrorId("name.preferredDisplayOrder")}
               className={styles.fieldError}
-              role="alert"
+              {...getFieldAccessibility("name.preferredDisplayOrder", {
+                error: fieldErrors["name.preferredDisplayOrder"],
+              }).errorProps}
             >
               {fieldErrors["name.preferredDisplayOrder"]}
             </span>
@@ -466,12 +474,18 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={user?.email ?? ""}
               onChange={handleChange}
               className={styles.input}
-              aria-invalid={fieldErrors.email ? "true" : undefined}
-              aria-describedby={fieldErrors.email ? getFieldErrorId("email") : undefined}
+              {...getFieldAccessibility("email", {
+                error: fieldErrors.email,
+              }).inputProps}
             />
           </label>
           {fieldErrors.email ? (
-            <span id={getFieldErrorId("email")} className={styles.fieldError} role="alert">
+            <span
+              className={styles.fieldError}
+              {...getFieldAccessibility("email", {
+                error: fieldErrors.email,
+              }).errorProps}
+            >
               {fieldErrors.email}
             </span>
           ) : null}
@@ -484,12 +498,9 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               value={selectedEmailPreference}
               onChange={handleChange}
               className={styles.select}
-              aria-invalid={fieldErrors.emailPreferences ? "true" : undefined}
-              aria-describedby={
-                fieldErrors.emailPreferences
-                  ? getFieldErrorId("emailPreferences")
-                  : undefined
-              }
+              {...getFieldAccessibility("emailPreferences", {
+                error: fieldErrors.emailPreferences,
+              }).inputProps}
             >
               <option value="">{t("select_preference")}</option>
               {getEmailPreferenceOptions().map((opt) => (
@@ -501,9 +512,10 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           </label>
           {fieldErrors.emailPreferences ? (
             <span
-              id={getFieldErrorId("emailPreferences")}
               className={styles.fieldError}
-              role="alert"
+              {...getFieldAccessibility("emailPreferences", {
+                error: fieldErrors.emailPreferences,
+              }).errorProps}
             >
               {fieldErrors.emailPreferences}
             </span>
