@@ -1,7 +1,13 @@
 import { useEffect, useId, useState, type CSSProperties, type ChangeEvent } from "react";
 import type { UserAvatarEntity } from "@plasius/entity-manager";
+import { useI18n } from "@plasius/translations";
 import { UserStore } from "../../UserProvider.js";
 import { createAccessibleFieldBindings } from "../../accessibility.js";
+import {
+  createProfileTranslationResolver,
+  profileTranslationKeys,
+  type ProfileTranslationResolver,
+} from "../../i18n.js";
 import { avatarUploadAccessibilityTheme } from "./accessibilityTheme.js";
 import styles from "./AvatarUploadPanel.module.css";
 
@@ -32,22 +38,21 @@ export interface AvatarUploadPanelProps {
   genericFailureMessage?: string;
 }
 
-const DEFAULT_TITLE = "Avatar upload";
-const DEFAULT_INPUT_LABEL = "Choose an avatar image";
-const DEFAULT_SELECTED_PREVIEW_LABEL = "Selected avatar preview";
-const DEFAULT_CURRENT_PREVIEW_LABEL = "Current avatar preview";
-const DEFAULT_EMPTY_STATE_TEXT = "No avatar is currently attached to your profile.";
-const DEFAULT_CURRENT_AVATAR_DESCRIPTION =
-  "This is the avatar currently attached to your profile.";
-const DEFAULT_GENERIC_FAILURE_MESSAGE =
-  "Avatar upload failed. Try a different image and retry.";
-
-function defaultSelectedAvatarDescription(fileName: string): string {
-  return `${fileName || "Selected image"} will replace your current avatar once processing completes.`;
+function getDefaultSelectedAvatarDescription(
+  fileName: string,
+  translate: ProfileTranslationResolver,
+): string {
+  return translate(profileTranslationKeys.avatarUpload.selectedAvatarDescription, {
+    fileName:
+      fileName || translate(profileTranslationKeys.avatarUpload.selectedImageFallback),
+  });
 }
 
-function defaultSuccessMessage(fileName: string): string {
-  return `Avatar uploaded successfully as ${fileName}.`;
+function getDefaultSuccessMessage(
+  fileName: string,
+  translate: ProfileTranslationResolver,
+): string {
+  return translate(profileTranslationKeys.avatarUpload.success, { fileName });
 }
 
 const DEFAULT_AVATAR_UPLOAD_THEME_VARS = {
@@ -65,16 +70,18 @@ export function AvatarUploadPanel({
   constraintsDescription,
   uploadAvatar,
   validateAvatarFile,
-  title = DEFAULT_TITLE,
-  inputLabel = DEFAULT_INPUT_LABEL,
-  selectedPreviewLabel = DEFAULT_SELECTED_PREVIEW_LABEL,
-  currentPreviewLabel = DEFAULT_CURRENT_PREVIEW_LABEL,
-  emptyStateText = DEFAULT_EMPTY_STATE_TEXT,
-  currentAvatarDescription = DEFAULT_CURRENT_AVATAR_DESCRIPTION,
-  selectedAvatarDescription = defaultSelectedAvatarDescription,
-  successMessage = defaultSuccessMessage,
-  genericFailureMessage = DEFAULT_GENERIC_FAILURE_MESSAGE,
+  title,
+  inputLabel,
+  selectedPreviewLabel,
+  currentPreviewLabel,
+  emptyStateText,
+  currentAvatarDescription,
+  selectedAvatarDescription,
+  successMessage,
+  genericFailureMessage,
 }: AvatarUploadPanelProps) {
+  const { t } = useI18n();
+  const translate = createProfileTranslationResolver(t);
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const titleId = useId();
@@ -128,7 +135,11 @@ export function AvatarUploadPanel({
       typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : null,
     );
     setIsUploading(true);
-    setUploadMessage(`Uploading ${file.name}...`);
+    setUploadMessage(
+      translate(profileTranslationKeys.avatarUpload.uploading, {
+        fileName: file.name,
+      }),
+    );
 
     try {
       const avatar = await uploadAvatar(file, {
@@ -144,13 +155,16 @@ export function AvatarUploadPanel({
       });
 
       replaceLocalPreviewUrl(null);
-      setUploadMessage(successMessage(file.name));
+      setUploadMessage(
+        successMessage?.(file.name) ?? getDefaultSuccessMessage(file.name, translate),
+      );
     } catch (error) {
       setUploadMessage("");
       setUploadError(
         error instanceof Error && error.message
           ? error.message
-          : genericFailureMessage,
+          : genericFailureMessage
+            ?? translate(profileTranslationKeys.avatarUpload.genericFailure),
       );
     } finally {
       setIsUploading(false);
@@ -174,6 +188,26 @@ export function AvatarUploadPanel({
   ]
     .filter(Boolean)
     .join(" ");
+  const titleText = title ?? translate(profileTranslationKeys.avatarUpload.title);
+  const inputLabelText =
+    inputLabel ?? translate(profileTranslationKeys.avatarUpload.inputLabel);
+  const selectedPreviewLabelText =
+    selectedPreviewLabel
+    ?? translate(profileTranslationKeys.avatarUpload.selectedPreviewLabel);
+  const currentPreviewLabelText =
+    currentPreviewLabel
+    ?? translate(profileTranslationKeys.avatarUpload.currentPreviewLabel);
+  const emptyStateTextValue =
+    emptyStateText ?? translate(profileTranslationKeys.avatarUpload.emptyState);
+  const currentAvatarDescriptionText =
+    currentAvatarDescription
+    ?? translate(profileTranslationKeys.avatarUpload.currentAvatarDescription);
+  const selectedAvatarDescriptionText = selectedAvatarDescription
+    ? selectedAvatarDescription(localPreviewName)
+    : getDefaultSelectedAvatarDescription(localPreviewName, translate);
+  const currentAvatarUrlLabel = translate(
+    profileTranslationKeys.avatarUpload.currentAvatarUrlLabel,
+  );
 
   return (
     <section
@@ -184,7 +218,7 @@ export function AvatarUploadPanel({
     >
       <div className={styles.avatarPanelHeader}>
         <h3 id={titleId} className={styles.avatarPanelTitle}>
-          {title}
+          {titleText}
         </h3>
         <p className={styles.avatarPanelSummary} {...fieldAccessibility.descriptionProps}>
           {constraintsDescription}
@@ -192,7 +226,7 @@ export function AvatarUploadPanel({
       </div>
 
       <label className={styles.avatarUploadLabel}>
-        <span className={styles.avatarUploadLabelText}>{inputLabel}</span>
+        <span className={styles.avatarUploadLabelText}>{inputLabelText}</span>
         <input
           type="file"
           accept={accept}
@@ -208,28 +242,28 @@ export function AvatarUploadPanel({
         <div className={styles.avatarPreviewPanel}>
           <img
             src={previewUrl}
-            alt={localPreviewUrl ? selectedPreviewLabel : currentPreviewLabel}
+            alt={localPreviewUrl ? selectedPreviewLabelText : currentPreviewLabelText}
             className={styles.avatarPreviewImage}
           />
           <div className={styles.avatarPreviewMeta}>
             <p className={styles.avatarPreviewLabel}>
-              {localPreviewUrl ? selectedPreviewLabel : currentPreviewLabel}
+              {localPreviewUrl ? selectedPreviewLabelText : currentPreviewLabelText}
             </p>
             <p id={previewDescriptionId} className={styles.avatarMeta}>
               {localPreviewUrl
-                ? selectedAvatarDescription(localPreviewName)
-                : currentAvatarDescription}
+                ? selectedAvatarDescriptionText
+                : currentAvatarDescriptionText}
             </p>
             {currentAvatarUrl ? (
               <p className={styles.avatarMeta}>
-                Current avatar URL: <a href={currentAvatarUrl}>{currentAvatarUrl}</a>
+                {currentAvatarUrlLabel} <a href={currentAvatarUrl}>{currentAvatarUrl}</a>
               </p>
             ) : null}
           </div>
         </div>
       ) : (
         <p id={previewDescriptionId} className={styles.avatarMeta}>
-          {emptyStateText}
+          {emptyStateTextValue}
         </p>
       )}
 

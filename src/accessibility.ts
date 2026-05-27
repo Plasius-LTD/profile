@@ -1,3 +1,8 @@
+import {
+  getProfileDefaultTranslation,
+  profileTranslationKeys,
+} from "./i18n.js";
+
 export interface AccessibleFieldOptions {
   idPrefix: string;
   name: string;
@@ -15,8 +20,9 @@ export interface AccessibleActionOptions {
   destructiveHint?: string;
 }
 
-const DEFAULT_DESTRUCTIVE_HINT =
-  "This action is destructive. Confirm the target and consequences before continuing.";
+const DEFAULT_DESTRUCTIVE_HINT = getProfileDefaultTranslation(
+  profileTranslationKeys.accessibility.destructiveHint,
+);
 
 function normalizeIdSegment(value: string): string {
   const normalizedChars: string[] = [];

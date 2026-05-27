@@ -9,12 +9,15 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - Added package-owned `en-GB` translation dictionaries and exported profile translation keys/default lookup helpers for settings, avatar upload, route status, accessibility, and save/provider error surfaces.
   - Exported reusable accessibility helpers for stable field labeling/error associations and destructive-action semantics so host profile/account flows can stay aligned with the package-owned settings surface.
 
 - **Changed**
+  - `SettingsPage`, `AvatarUploadPanel`, and `ProfileRouteStatusPanel` now resolve package-owned display text through `@plasius/translations` with packaged fallback defaults.
   - `SettingsPage` and `AvatarUploadPanel` now consume shared accessibility bindings instead of duplicating ad hoc ARIA wiring.
 
 - **Fixed**
+  - Save and provider validation fallback messages now expose stable translation metadata/defaults instead of relying on embedded English literals.
   - Package accessibility coverage now verifies reusable destructive-action affordance semantics alongside field-level validation and live-announcement behavior.
 
 - **Security**

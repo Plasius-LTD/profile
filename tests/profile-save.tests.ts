@@ -1,11 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
+  getProfileDefaultTranslation,
+  profileTranslationKeys,
+  type ProfileTranslationKey,
+  type ProfileTranslationResolver,
+} from "../src/i18n.js";
+import {
   UserProfileSaveError,
   createValidationSaveError,
   isUserEntityLike,
   mapUserValidationErrors,
   normalizeUnknownSaveError,
 } from "../src/profile-save.js";
+
+const translatedProfileText: Partial<Record<ProfileTranslationKey, string>> = {
+  [profileTranslationKeys.settings.required.lastName]: "Surname is required.",
+  [profileTranslationKeys.save.validationFailed]:
+    "Translated profile validation failed.",
+  [profileTranslationKeys.save.validationSummary]:
+    "Translated highlighted fields summary.",
+  [profileTranslationKeys.save.saveFailed]: "Translated profile save failed.",
+};
+
+const translateProfile: ProfileTranslationResolver = (key) =>
+  translatedProfileText[key] ?? getProfileDefaultTranslation(key);
 
 describe("profile-save helpers", () => {
   it("maps field validation errors and rewrites empty-field messages", () => {
@@ -34,8 +52,22 @@ describe("profile-save helpers", () => {
     expect(error).toBeInstanceOf(UserProfileSaveError);
     expect(error.category).toBe("validation");
     expect(error.message).toBe("Profile validation failed.");
+    expect(error.messageKey).toBe(profileTranslationKeys.save.validationFailed);
+    expect(error.messageDefault).toBe("Profile validation failed.");
     expect(error.fieldErrors["name.lastName"]).toBe("Last name is required.");
     expect(error.formErrors).toEqual(["Fix the highlighted fields before saving."]);
+  });
+
+  it("uses the provided profile translator for save validation defaults", () => {
+    const error = createValidationSaveError(
+      ["High PII field must not be empty: name.lastName"],
+      translateProfile,
+    );
+
+    expect(error.message).toBe("Translated profile validation failed.");
+    expect(error.messageDefault).toBe("Profile validation failed.");
+    expect(error.fieldErrors["name.lastName"]).toBe("Surname is required.");
+    expect(error.formErrors).toEqual(["Translated highlighted fields summary."]);
   });
 
   it("creates validation save errors from top-level form errors", () => {
@@ -69,6 +101,14 @@ describe("profile-save helpers", () => {
     expect(normalizeUnknownSaveError("Request timed out.").message).toBe("Request timed out.");
     expect(normalizeUnknownSaveError("   ").message).toBe("Profile save failed.");
     expect(normalizeUnknownSaveError({ retryable: false }).message).toBe("Profile save failed.");
+  });
+
+  it("attaches stable translation metadata to fallback save errors", () => {
+    const normalized = normalizeUnknownSaveError({ retryable: false }, translateProfile);
+
+    expect(normalized.message).toBe("Translated profile save failed.");
+    expect(normalized.messageKey).toBe(profileTranslationKeys.save.saveFailed);
+    expect(normalized.messageDefault).toBe("Profile save failed.");
   });
 
   it("recognizes user-shaped objects by id presence", () => {

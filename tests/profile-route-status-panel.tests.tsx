@@ -1,7 +1,23 @@
 /* @vitest-environment jsdom */
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileRouteStatusPanel } from "../src/index.js";
+
+const { translationOverrides } = vi.hoisted(() => ({
+  translationOverrides: new Map<string, string>(),
+}));
+
+vi.mock("@plasius/translations", () => ({
+  useI18n: () => ({
+    t: (key: string, args: Record<string, string | number | boolean> = {}) => {
+      const value = translationOverrides.get(key) ?? key;
+      return value.replace(/\{(\w+)\}/g, (_match, placeholder: string) => {
+        const replacement = args[placeholder];
+        return replacement === undefined ? `{${placeholder}}` : String(replacement);
+      });
+    },
+  }),
+}));
 
 vi.mock("@plasius/sharedcomponents", () => ({
   StatusPanel: ({
@@ -34,6 +50,10 @@ vi.mock("@plasius/sharedcomponents", () => ({
 }));
 
 describe("ProfileRouteStatusPanel", () => {
+  beforeEach(() => {
+    translationOverrides.clear();
+  });
+
   it("renders the package-owned loading shell copy", () => {
     render(<ProfileRouteStatusPanel variant="loading" />);
 
@@ -45,6 +65,24 @@ describe("ProfileRouteStatusPanel", () => {
         "Fetching the latest profile data before mounting the shared editor.",
       ),
     ).toBeTruthy();
+  });
+
+  it("uses provider translations for package-owned status text", () => {
+    translationOverrides.set(
+      "profile.routeStatus.loading.title",
+      "Loading account profile",
+    );
+    translationOverrides.set(
+      "profile.routeStatus.loading.description",
+      "Fetching translated profile copy.",
+    );
+
+    render(<ProfileRouteStatusPanel variant="loading" />);
+
+    expect(
+      screen.getByRole("status", { name: /loading account profile/i }),
+    ).toBeTruthy();
+    expect(screen.getByText("Fetching translated profile copy.")).toBeTruthy();
   });
 
   it("renders provisioning trace context while the profile is being created", () => {

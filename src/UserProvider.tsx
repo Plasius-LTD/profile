@@ -11,10 +11,16 @@ import {
 import { validateUserId } from "@plasius/schema";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { createScopedStoreContext, type IState } from "@plasius/react-state";
+import {
+  getProfileDefaultTranslation,
+  profileTranslationKeys,
+} from "./i18n.js";
 
 const DEFAULT_USER_ENTITY_VERSION = "1.0.0";
 const DEFAULT_FIRST_NAME = "Plasius";
-const DEFAULT_DISPLAY_NAME = "Plasius User";
+const DEFAULT_DISPLAY_NAME = getProfileDefaultTranslation(
+  profileTranslationKeys.provider.defaultDisplayName,
+);
 const USER_PROFILE_AUTO_SAVE_DELAY_MS = 750;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -131,7 +137,13 @@ function sanitizeUserAvatar(avatar: unknown): UserAvatarEntity | undefined {
   const validatedAvatar = userAvatarSchema.validate(avatar as UserAvatarEntity);
   if (!validatedAvatar.valid || !validatedAvatar.value) {
     throw new Error(
-      `Invalid User Avatar: ${validatedAvatar.errors?.join(", ") ?? "unknown error"}`
+      getProfileDefaultTranslation(profileTranslationKeys.provider.invalidUserAvatar, {
+        details:
+          validatedAvatar.errors?.join(", ")
+          ?? getProfileDefaultTranslation(
+            profileTranslationKeys.provider.unknownValidationError,
+          ),
+      }),
     );
   }
 
@@ -156,12 +168,24 @@ export function ValidateUser(user: UserEntity) {
   const validated = userEntitySchema.validate(normalizedUser);
   if (!validatedBase.valid || !validatedBase.value) {
     throw new Error(
-      `Invalid User Profile: ${validatedBase.errors?.join(", ") ?? "unknown error"}`
+      getProfileDefaultTranslation(profileTranslationKeys.provider.invalidUserProfile, {
+        details:
+          validatedBase.errors?.join(", ")
+          ?? getProfileDefaultTranslation(
+            profileTranslationKeys.provider.unknownValidationError,
+          ),
+      }),
     );
   }
   if (!validated.valid || !validated.value) {
     throw new Error(
-      `Invalid User Profile: ${validated.errors?.join(", ") ?? "unknown error"}`
+      getProfileDefaultTranslation(profileTranslationKeys.provider.invalidUserProfile, {
+        details:
+          validated.errors?.join(", ")
+          ?? getProfileDefaultTranslation(
+            profileTranslationKeys.provider.unknownValidationError,
+          ),
+      }),
     );
   }
 
@@ -296,7 +320,11 @@ export function createHttpUserProfileClient(
         return null;
       }
       if (!response.ok) {
-        throw new Error(`Failed to load user (${response.status})`);
+        throw new Error(
+          getProfileDefaultTranslation(profileTranslationKeys.provider.failedToLoadUser, {
+            status: response.status,
+          }),
+        );
       }
 
       return (await response.json()) as UserEntity;
@@ -311,7 +339,11 @@ export function createHttpUserProfileClient(
         body: JSON.stringify({ id: userId } satisfies Partial<UserEntity>),
       });
       if (!response.ok) {
-        throw new Error(`Failed to load user (${response.status})`);
+        throw new Error(
+          getProfileDefaultTranslation(profileTranslationKeys.provider.failedToCreateUser, {
+            status: response.status,
+          }),
+        );
       }
 
       return (await response.json()) as UserEntity;
@@ -327,7 +359,11 @@ export function createHttpUserProfileClient(
         body: JSON.stringify(user),
       });
       if (!response.ok) {
-        throw new Error(`Save failed with status ${response.status}`);
+        throw new Error(
+          getProfileDefaultTranslation(profileTranslationKeys.provider.failedToSaveUser, {
+            status: response.status,
+          }),
+        );
       }
     },
   };
@@ -354,7 +390,11 @@ export async function saveUserProfile(
     const validatedUser = ValidateUser(user);
     const targetUserId = typeof validatedUser.id === "string" ? validatedUser.id : "";
     if (!validateUserId(targetUserId)) {
-      throw new Error("Invalid user id for save.");
+      throw new Error(
+        getProfileDefaultTranslation(
+          profileTranslationKeys.provider.invalidUserIdForSave,
+        ),
+      );
     }
     const client = resolveUserProfileClient(clientOrFetch);
     await client.save(validatedUser);

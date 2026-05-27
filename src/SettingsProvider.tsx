@@ -6,6 +6,10 @@ import type { IState } from "@plasius/react-state";
 import { useAuthorizedFetch } from "@plasius/auth";
 import { useQuery, useMutation, useQueryClient } from "@plasius/react-query";
 import type { SettingsEntity } from "@plasius/entity-manager";
+import {
+  getProfileDefaultTranslation,
+  profileTranslationKeys,
+} from "./i18n.js";
 
 export type SettingsState = IState & Record<string, unknown>;
 
@@ -69,7 +73,12 @@ export function createHttpSettingsDataClient(
     load: async (configUrl: string): Promise<SettingsEntity> => {
       const response = await authorizedFetch(configUrl);
       if (!response.ok) {
-        throw new Error(`Load failed with status ${response.status}`);
+        throw new Error(
+          getProfileDefaultTranslation(
+            profileTranslationKeys.provider.settingsLoadFailed,
+            { status: response.status },
+          ),
+        );
       }
       return (await response.json()) as SettingsEntity;
     },
@@ -82,7 +91,12 @@ export function createHttpSettingsDataClient(
         body: JSON.stringify(toSettingsEntity(state)),
       });
       if (!response.ok) {
-        throw new Error(`Save failed with status ${response.status}`);
+        throw new Error(
+          getProfileDefaultTranslation(
+            profileTranslationKeys.provider.settingsSaveFailed,
+            { status: response.status },
+          ),
+        );
       }
     },
   };

@@ -11,9 +11,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsPage } from "../src/Pages/Settings/index.js";
 
-const { authorizedFetchMock, dispatchMock, storeState } = vi.hoisted(() => ({
+const { authorizedFetchMock, dispatchMock, storeState, translationOverrides } = vi.hoisted(() => ({
   authorizedFetchMock: vi.fn(),
   dispatchMock: vi.fn(),
+  translationOverrides: new Map<string, string>(),
   storeState: {
     user: null as UserEntity | null,
   },
@@ -25,7 +26,13 @@ vi.mock("@plasius/auth", () => ({
 
 vi.mock("@plasius/translations", () => ({
   useI18n: () => ({
-    t: (key: string) => key,
+    t: (key: string, args: Record<string, string | number | boolean> = {}) => {
+      const value = translationOverrides.get(key) ?? key;
+      return value.replace(/\{(\w+)\}/g, (_match, placeholder: string) => {
+        const replacement = args[placeholder];
+        return replacement === undefined ? `{${placeholder}}` : String(replacement);
+      });
+    },
   }),
 }));
 
@@ -81,6 +88,7 @@ describe("SettingsPage", () => {
   beforeEach(() => {
     authorizedFetchMock.mockReset();
     dispatchMock.mockReset();
+    translationOverrides.clear();
     storeState.user = createValidUser();
   });
 
@@ -94,22 +102,22 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage />);
 
-    expect(screen.getByRole("heading", { name: "profile_settings" })).toBeTruthy();
-    expect(screen.getByRole("img", { name: "avatar_preview" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Profile settings" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Avatar preview" })).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("display_name"), {
+    fireEvent.change(screen.getByLabelText("Display name"), {
       target: { name: "name.displayName", value: "Alicia" },
     });
-    fireEvent.change(screen.getByLabelText("email"), {
+    fireEvent.change(screen.getByLabelText("Email"), {
       target: { name: "email", value: "new@example.com" },
     });
-    fireEvent.change(screen.getByLabelText("preferred_name_display"), {
+    fireEvent.change(screen.getByLabelText("Preferred name display"), {
       target: {
         name: "name.preferredDisplayOrder",
         value: PreferredDisplayOrder.FIRST_NAME,
       },
     });
-    fireEvent.change(screen.getByLabelText("email_preferences"), {
+    fireEvent.change(screen.getByLabelText("Email preferences"), {
       target: {
         name: "emailPreferences",
         value: UserEmailPreferences.SECURITY,
@@ -139,18 +147,28 @@ describe("SettingsPage", () => {
       },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
     expect(infoSpy).toHaveBeenCalledWith("Saved:", storeState.user);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it("renders settings text from the shared translation provider when available", () => {
+    translationOverrides.set("profile.settings.heading", "Account profile");
+    translationOverrides.set("profile.settings.action.save", "Store profile");
+
+    render(<SettingsPage />);
+
+    expect(screen.getByRole("heading", { name: "Account profile" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Store profile" })).toBeTruthy();
+  });
+
   it("suppresses the legacy avatar field when hideAvatarField is enabled", () => {
     render(<SettingsPage hideAvatarField />);
 
-    expect(screen.queryByLabelText("upload_avatar")).toBeNull();
-    expect(screen.queryByRole("img", { name: "avatar_preview" })).toBeNull();
-    expect(screen.getByLabelText("display_name")).toBeTruthy();
+    expect(screen.queryByLabelText("Upload avatar")).toBeNull();
+    expect(screen.queryByRole("img", { name: "Avatar preview" })).toBeNull();
+    expect(screen.getByLabelText("Display name")).toBeTruthy();
   });
 
   it("falls back to an empty email-preference selection when the preference list is empty", () => {
@@ -159,7 +177,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     expect(
-      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+      (screen.getByLabelText("Email preferences") as HTMLSelectElement).value,
     ).toBe("");
   });
 
@@ -176,7 +194,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     expect(
-      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+      (screen.getByLabelText("Email preferences") as HTMLSelectElement).value,
     ).toBe("");
     validateSpy.mockRestore();
   });
@@ -204,7 +222,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     const file = new File(["binary"], "avatar.png", { type: "image/png" });
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [file] },
     });
 
@@ -234,7 +252,7 @@ describe("SettingsPage", () => {
   it("ignores avatar changes when no file is selected", () => {
     render(<SettingsPage />);
 
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [] },
     });
 
@@ -257,7 +275,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     const file = new File(["binary"], "broken.png", { type: "image/png" });
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [file] },
     });
 
@@ -289,7 +307,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     const file = new File(["binary"], "broken.png", { type: "image/png" });
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [file] },
     });
 
@@ -315,7 +333,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     const file = new File(["binary"], "broken.png", { type: "image/png" });
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [file] },
     });
 
@@ -337,7 +355,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage />);
 
     const file = new File(["binary"], "broken.png", { type: "image/png" });
-    fireEvent.change(screen.getByLabelText("upload_avatar"), {
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
       target: { files: [file] },
     });
 
@@ -374,14 +392,14 @@ describe("SettingsPage", () => {
     infoSpy.mockClear();
     validateSpy.mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
     expect(screen.getByText("Fix the highlighted fields before saving.")).toBeTruthy();
     expect(screen.getByText("Email is required.")).toBeTruthy();
     expect(screen.getByText("First name is required.")).toBeTruthy();
     expect(screen.getByText("forced failure")).toBeTruthy();
-    const emailInput = screen.getByLabelText("email");
-    const firstNameInput = screen.getByLabelText("first_name");
+    const emailInput = screen.getByLabelText("Email");
+    const firstNameInput = screen.getByLabelText("First name");
     expect(emailInput.getAttribute("aria-invalid")).toBe("true");
     expect(emailInput.getAttribute("aria-errormessage")).toMatch(/-email-error$/);
     expect(firstNameInput.getAttribute("aria-invalid")).toBe("true");
@@ -401,12 +419,12 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
     expect(
       screen.getByText("Display name contains unsupported characters: name.displayName"),
     ).toBeTruthy();
-    expect(screen.getByLabelText("display_name").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("Display name").getAttribute("aria-invalid")).toBe("true");
 
     validateSpy.mockRestore();
   });
@@ -420,10 +438,10 @@ describe("SettingsPage", () => {
 
     render(<SettingsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "save_settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
     expect(screen.getByText("Email is required.")).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("email"), {
+    fireEvent.change(screen.getByLabelText("Email"), {
       target: { name: "email", value: "updated@example.com" },
     });
 
@@ -441,9 +459,9 @@ describe("SettingsPage", () => {
     });
 
     expect(() => render(<SettingsPage />)).not.toThrow();
-    expect(screen.getByLabelText("email")).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
     expect(
-      (screen.getByLabelText("email_preferences") as HTMLSelectElement).value,
+      (screen.getByLabelText("Email preferences") as HTMLSelectElement).value,
     ).toBe("");
   });
 });
