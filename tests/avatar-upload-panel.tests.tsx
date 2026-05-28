@@ -181,6 +181,25 @@ describe("AvatarUploadPanel", () => {
     expect(screen.getByLabelText("Pick profile image")).toBeTruthy();
   });
 
+  it("ignores file input changes when no avatar file is selected", () => {
+    render(
+      <AvatarUploadPanel
+        accept="image/png"
+        constraintsDescription="Use a PNG image."
+        validateAvatarFile={validateAvatarFileMock}
+        uploadAvatar={uploadAvatarMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Choose an avatar image"), {
+      target: { files: [] },
+    });
+
+    expect(validateAvatarFileMock).not.toHaveBeenCalled();
+    expect(uploadAvatarMock).not.toHaveBeenCalled();
+    expect(dispatchMock).not.toHaveBeenCalled();
+  });
+
   it("shows validation errors before invoking the upload adapter", async () => {
     validateAvatarFileMock.mockResolvedValue("Avatar image is too large.");
 

@@ -342,6 +342,58 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("uses the translated default avatar upload failure when JSON parsing fails", async () => {
+    authorizedFetchMock.mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers({
+        "content-type": "application/json",
+      }),
+      json: async () => {
+        throw new Error("invalid json");
+      },
+    });
+
+    render(<SettingsPage />);
+
+    const file = new File(["binary"], "broken.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Avatar upload failed. Try a different image and retry."),
+      ).toBeTruthy();
+    });
+  });
+
+  it("uses the translated default avatar upload failure when plain-text parsing fails", async () => {
+    authorizedFetchMock.mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: new Headers({
+        "content-type": "text/plain",
+      }),
+      text: async () => {
+        throw new Error("text unavailable");
+      },
+    });
+
+    render(<SettingsPage />);
+
+    const file = new File(["binary"], "broken.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("Upload avatar"), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Avatar upload failed. Try a different image and retry."),
+      ).toBeTruthy();
+    });
+  });
+
   it("renders avatar validation failures when the upload payload is malformed", async () => {
     authorizedFetchMock.mockResolvedValue({
       ok: true,

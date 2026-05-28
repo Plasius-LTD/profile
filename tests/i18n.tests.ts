@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getProfileDefaultTranslation,
   profileTranslationKeys,
+  profileEnGbTranslations,
   profileTranslations,
   resolveProfileTranslation,
 } from "../src/i18n.js";
@@ -44,5 +45,54 @@ describe("profile translations", () => {
         status: 503,
       }),
     ).toBe("Load failed with status 503");
+  });
+
+  it("renders function-valued dictionaries and falls back to the key when missing", () => {
+    const key = profileTranslationKeys.settings.heading;
+    const dictionary = profileEnGbTranslations as unknown as Record<string, unknown>;
+    const original = dictionary[key];
+
+    try {
+      dictionary[key] = ({ label }: { label: string }) => `Function ${label}`;
+
+      expect(
+        getProfileDefaultTranslation(key, {
+          label: "value",
+        }),
+      ).toBe("Function value");
+      expect(
+        resolveProfileTranslation(
+          () => "Translated with function",
+          key,
+        ),
+      ).toBe("Translated with function");
+      expect(
+        getProfileDefaultTranslation(
+          "profile.missing.key" as Parameters<typeof getProfileDefaultTranslation>[0],
+        ),
+      ).toBe("profile.missing.key");
+    } finally {
+      dictionary[key] = original;
+    }
+  });
+
+  it("interpolates placeholders from package defaults", () => {
+    expect(
+      getProfileDefaultTranslation(
+        profileTranslationKeys.routeStatus.errorMeta,
+        {
+          attempts: 3,
+          requestId: "profile-route-123",
+        },
+      ),
+    ).toBe("Attempts: 3 | Trace ID: profile-route-123");
+    expect(
+      getProfileDefaultTranslation(
+        profileTranslationKeys.routeStatus.errorMeta,
+        {
+          attempts: 3,
+        },
+      ),
+    ).toBe("Attempts: 3 | Trace ID: {requestId}");
   });
 });
