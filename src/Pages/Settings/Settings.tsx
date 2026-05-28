@@ -10,6 +10,12 @@ import { useAuthorizedFetch } from "@plasius/auth";
 import { useI18n } from "@plasius/translations";
 import { UserStore } from "../../UserProvider.js";
 import { createAccessibleFieldBindings } from "../../accessibility.js";
+import {
+  createProfileTranslationResolver,
+  profileTranslationKeys,
+  type ProfileTranslationKey,
+  type ProfileTranslationResolver,
+} from "../../i18n.js";
 
 import styles from "./Settings.module.css";
 
@@ -40,21 +46,73 @@ const SETTINGS_FIELD_NAMES = new Set<SettingsFieldName>([
   "emailPreferences",
 ]);
 
-const FIELD_LABELS: Record<Exclude<SettingsFieldName, "avatar">, string> = {
-  "name.firstName": "First name",
-  "name.middleName": "Middle name",
-  "name.lastName": "Last name",
-  "name.displayName": "Display name",
-  "name.preferredDisplayOrder": "Preferred name display",
-  email: "Email",
-  emailPreferences: "Email preferences",
-};
+const FIELD_LABEL_TRANSLATION_KEYS = {
+  "name.firstName": profileTranslationKeys.settings.firstName,
+  "name.middleName": profileTranslationKeys.settings.middleName,
+  "name.lastName": profileTranslationKeys.settings.lastName,
+  "name.displayName": profileTranslationKeys.settings.displayName,
+  "name.preferredDisplayOrder":
+    profileTranslationKeys.settings.preferredDisplayOrder,
+  email: profileTranslationKeys.settings.email,
+  emailPreferences: profileTranslationKeys.settings.emailPreferences,
+} as const satisfies Record<
+  Exclude<SettingsFieldName, "avatar">,
+  ProfileTranslationKey
+>;
+
+const REQUIRED_FIELD_TRANSLATION_KEYS = {
+  "name.firstName": profileTranslationKeys.settings.required.firstName,
+  "name.middleName": profileTranslationKeys.settings.required.middleName,
+  "name.lastName": profileTranslationKeys.settings.required.lastName,
+  "name.displayName": profileTranslationKeys.settings.required.displayName,
+  "name.preferredDisplayOrder":
+    profileTranslationKeys.settings.required.preferredDisplayOrder,
+  email: profileTranslationKeys.settings.required.email,
+  emailPreferences: profileTranslationKeys.settings.required.emailPreferences,
+} as const satisfies Record<
+  Exclude<SettingsFieldName, "avatar">,
+  ProfileTranslationKey
+>;
+
+const PREFERRED_DISPLAY_ORDER_TRANSLATION_KEYS = {
+  [PreferredDisplayOrder.FIRST_NAME]:
+    profileTranslationKeys.settings.preferredDisplayOrderOptions.firstName,
+  [PreferredDisplayOrder.LAST_NAME]:
+    profileTranslationKeys.settings.preferredDisplayOrderOptions.lastName,
+  [PreferredDisplayOrder.MIDDLE_NAME]:
+    profileTranslationKeys.settings.preferredDisplayOrderOptions.middleName,
+  [PreferredDisplayOrder.DISPLAY_NAME]:
+    profileTranslationKeys.settings.preferredDisplayOrderOptions.displayName,
+} as const satisfies Record<PreferredDisplayOrder, ProfileTranslationKey>;
+
+const EMAIL_PREFERENCE_TRANSLATION_KEYS = {
+  [UserEmailPreferences.ALL]:
+    profileTranslationKeys.settings.emailPreferenceOptions.all,
+  [UserEmailPreferences.NONE]:
+    profileTranslationKeys.settings.emailPreferenceOptions.none,
+  [UserEmailPreferences.IMPORTANT]:
+    profileTranslationKeys.settings.emailPreferenceOptions.important,
+  [UserEmailPreferences.CUSTOM]:
+    profileTranslationKeys.settings.emailPreferenceOptions.custom,
+  [UserEmailPreferences.PROMOTIONAL]:
+    profileTranslationKeys.settings.emailPreferenceOptions.promotional,
+  [UserEmailPreferences.TRANSACTIONAL]:
+    profileTranslationKeys.settings.emailPreferenceOptions.transactional,
+  [UserEmailPreferences.UPDATES]:
+    profileTranslationKeys.settings.emailPreferenceOptions.updates,
+  [UserEmailPreferences.NEWSLETTER]:
+    profileTranslationKeys.settings.emailPreferenceOptions.newsletter,
+  [UserEmailPreferences.MARKETING]:
+    profileTranslationKeys.settings.emailPreferenceOptions.marketing,
+  [UserEmailPreferences.SECURITY]:
+    profileTranslationKeys.settings.emailPreferenceOptions.security,
+  [UserEmailPreferences.ACCOUNT]:
+    profileTranslationKeys.settings.emailPreferenceOptions.account,
+  [UserEmailPreferences.PRIVACY]:
+    profileTranslationKeys.settings.emailPreferenceOptions.privacy,
+} as const satisfies Record<UserEmailPreferences, ProfileTranslationKey>;
 
 const EMPTY_FIELD_PATTERN = /^High PII field must not be empty: ([a-zA-Z]+(?:\.[a-zA-Z]+)*)$/;
-const DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE =
-  "Avatar upload failed. Try a different image and retry.";
-const INVALID_AVATAR_PAYLOAD_MESSAGE =
-  "Avatar upload completed but the returned avatar payload was invalid.";
 
 function isSettingsFieldName(value: string): value is SettingsFieldName {
   return SETTINGS_FIELD_NAMES.has(value as SettingsFieldName);
@@ -72,16 +130,20 @@ function getFieldNameFromValidationError(error: string): Exclude<SettingsFieldNa
 function getFieldValidationMessage(
   field: Exclude<SettingsFieldName, "avatar">,
   error: string,
+  translate: ProfileTranslationResolver,
 ): string {
   const emptyFieldMatch = error.match(EMPTY_FIELD_PATTERN);
   if (emptyFieldMatch?.[1] === field) {
-    return `${FIELD_LABELS[field]} is required.`;
+    return translate(REQUIRED_FIELD_TRANSLATION_KEYS[field]);
   }
 
   return error;
 }
 
-function mapValidationErrors(errors: unknown[] | undefined): {
+function mapValidationErrors(
+  errors: unknown[] | undefined,
+  translate: ProfileTranslationResolver,
+): {
   fieldErrors: SettingsFieldErrors;
   formErrors: string[];
 } {
@@ -93,7 +155,7 @@ function mapValidationErrors(errors: unknown[] | undefined): {
     const field = getFieldNameFromValidationError(error);
 
     if (field) {
-      fieldErrors[field] ??= getFieldValidationMessage(field, error);
+      fieldErrors[field] ??= getFieldValidationMessage(field, error, translate);
       continue;
     }
 
@@ -129,21 +191,22 @@ async function readUploadErrorMessage(response: Response): Promise<string | null
   }
 }
 
-const getEmailPreferenceOptions = () =>
-  Object.entries(UserEmailPreferences).map(([key, value]) => ({
-    label: key.replace(/([a-z])([A-Z])/g, "$1 $2"), // Optional: format nicely
+const getEmailPreferenceOptions = (translate: ProfileTranslationResolver) =>
+  Object.values(UserEmailPreferences).map((value) => ({
+    label: translate(EMAIL_PREFERENCE_TRANSLATION_KEYS[value]),
     value,
   }));
 
-const getPreferredDisplayOrder = () =>
-  Object.entries(PreferredDisplayOrder).map(([key, value]) => ({
-    label: key.replace(/([a-z])([A-Z])/g, "$1 $2"), // Optional: format nicely
+const getPreferredDisplayOrder = (translate: ProfileTranslationResolver) =>
+  Object.values(PreferredDisplayOrder).map((value) => ({
+    label: translate(PREFERRED_DISPLAY_ORDER_TRANSLATION_KEYS[value]),
     value,
   }));
 
 export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   const authorizedFetch = useAuthorizedFetch();
   const { t } = useI18n();
+  const translate = React.useMemo(() => createProfileTranslationResolver(t), [t]);
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const errorIdPrefix = React.useId();
@@ -153,6 +216,9 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   const selectedEmailPreference = Array.isArray(user?.emailPreferences)
     ? (user.emailPreferences[0] ?? "")
     : "";
+  const defaultAvatarUploadFailureMessage = translate(
+    profileTranslationKeys.settings.avatarUploadFailed,
+  );
   const hasValidationSummary = Object.keys(fieldErrors).length > 0 || formErrors.length > 0;
   const avatarFieldAccessibility = createAccessibleFieldBindings({
     idPrefix: errorIdPrefix,
@@ -238,7 +304,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
 
     if (!response.ok) {
       throw new Error(
-        (await readUploadErrorMessage(response)) ?? DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE,
+        (await readUploadErrorMessage(response)) ?? defaultAvatarUploadFailureMessage,
       );
     }
 
@@ -262,7 +328,9 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
       const validatedAvatar = userAvatarSchema.validate(uploadedAvatar);
 
       if (!validatedAvatar.valid || validatedAvatar.errors?.length) {
-        throw new Error(INVALID_AVATAR_PAYLOAD_MESSAGE);
+        throw new Error(
+          translate(profileTranslationKeys.settings.avatarPayloadInvalid),
+        );
       }
 
       dispatch({
@@ -276,7 +344,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
       setAvatarError(
         err instanceof Error && err.message
           ? err.message
-          : DEFAULT_AVATAR_UPLOAD_FAILURE_MESSAGE,
+          : defaultAvatarUploadFailureMessage,
       );
     }
   };
@@ -285,7 +353,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     e.preventDefault();
     const validation = userEntitySchema.validate(user);
     if (!validation.valid || validation.errors?.length) {
-      const nextErrors = mapValidationErrors(validation.errors);
+      const nextErrors = mapValidationErrors(validation.errors, translate);
       setFieldErrors(nextErrors.fieldErrors);
       setFormErrors(nextErrors.formErrors);
       return;
@@ -299,11 +367,11 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
   return (
     <div className={styles.settingsContainer}>
       <form onSubmit={handleSubmit} className={styles.settingsForm}>
-        <h2>{t("profile_settings")}</h2>
+        <h2>{translate(profileTranslationKeys.settings.heading)}</h2>
         {hasValidationSummary ? (
           <div className={styles.errorSummary} role="alert" aria-live="polite">
             <p className={styles.errorSummaryTitle}>
-              Fix the highlighted fields before saving.
+              {translate(profileTranslationKeys.settings.validationSummary)}
             </p>
             {formErrors.length > 0 ? (
               <ul className={styles.errorList}>
@@ -318,7 +386,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           <>
             <div className={styles.fieldGroup}>
               <label className={styles.label}>
-                {t("upload_avatar")}
+                {translate(profileTranslationKeys.settings.uploadAvatar)}
                 <input
                   type="file"
                   name="avatar"
@@ -339,7 +407,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
               <div>
                 <img
                   src={(user?.avatar as UserAvatarEntity)?.url as string}
-                  alt={t("avatar_preview")}
+                  alt={translate(profileTranslationKeys.settings.avatarPreview)}
                   className={styles.avatarPreview}
                 />
               </div>
@@ -348,7 +416,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         ) : null}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("first_name")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.firstName"])}
             <input
               name="name.firstName"
               value={user?.name?.firstName ?? ""}
@@ -365,7 +433,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("middle_name")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.middleName"])}
             <input
               name="name.middleName"
               value={user?.name?.middleName ?? ""}
@@ -389,7 +457,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("last_name")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.lastName"])}
             <input
               name="name.lastName"
               value={user?.name?.lastName ?? ""}
@@ -413,7 +481,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("display_name")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.displayName"])}
             <input
               name="name.displayName"
               value={user?.name?.displayName ?? ""}
@@ -437,7 +505,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("preferred_name_display")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.preferredDisplayOrder"])}
             <select
               name="name.preferredDisplayOrder"
               value={user?.name?.preferredDisplayOrder ?? ""}
@@ -447,8 +515,10 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
                 error: fieldErrors["name.preferredDisplayOrder"],
               }).inputProps}
             >
-              <option value="">{t("select_preference")}</option>
-              {getPreferredDisplayOrder().map((opt) => (
+              <option value="">
+                {translate(profileTranslationKeys.settings.selectPreference)}
+              </option>
+              {getPreferredDisplayOrder(translate).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -468,7 +538,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("email")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS.email)}
             <input
               name="email"
               value={user?.email ?? ""}
@@ -492,7 +562,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
         </div>
         <div className={styles.fieldGroup}>
           <label className={styles.label}>
-            {t("email_preferences")}
+            {translate(FIELD_LABEL_TRANSLATION_KEYS.emailPreferences)}
             <select
               name="emailPreferences"
               value={selectedEmailPreference}
@@ -502,8 +572,10 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
                 error: fieldErrors.emailPreferences,
               }).inputProps}
             >
-              <option value="">{t("select_preference")}</option>
-              {getEmailPreferenceOptions().map((opt) => (
+              <option value="">
+                {translate(profileTranslationKeys.settings.selectPreference)}
+              </option>
+              {getEmailPreferenceOptions(translate).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -522,7 +594,7 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
           ) : null}
         </div>
         <button type="submit" className={styles.submitButton}>
-          {t("save_settings")}
+          {translate(profileTranslationKeys.settings.saveSettings)}
         </button>
       </form>
     </div>

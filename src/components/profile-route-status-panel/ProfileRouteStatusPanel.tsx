@@ -1,4 +1,9 @@
 import { StatusPanel } from "@plasius/sharedcomponents";
+import { useI18n } from "@plasius/translations";
+import {
+  createProfileTranslationResolver,
+  profileTranslationKeys,
+} from "../../i18n.js";
 
 export type ProfileRouteStatusVariant = "loading" | "provisioning" | "error";
 
@@ -19,12 +24,15 @@ export function ProfileRouteStatusPanel({
   retryDisabled = false,
   className,
 }: ProfileRouteStatusPanelProps) {
+  const { t } = useI18n();
+  const translate = createProfileTranslationResolver(t);
+
   if (variant === "loading") {
     return (
       <StatusPanel
-        title="Loading profile settings"
-        description="Fetching the latest profile data before mounting the shared editor."
-        meta="Automatic retries use a capped backoff policy for transient dependency failures."
+        title={translate(profileTranslationKeys.routeStatus.loadingTitle)}
+        description={translate(profileTranslationKeys.routeStatus.loadingDescription)}
+        meta={translate(profileTranslationKeys.routeStatus.loadingMeta)}
         role="status"
         announce="polite"
         className={className}
@@ -35,11 +43,15 @@ export function ProfileRouteStatusPanel({
   if (variant === "provisioning") {
     return (
       <StatusPanel
-        title="Preparing your profile"
+        title={translate(profileTranslationKeys.routeStatus.provisioningTitle)}
         description={
-          "No saved profile record was found for this account, so a starter profile is being created now."
+          translate(profileTranslationKeys.routeStatus.provisioningDescription)
         }
-        meta={`Trace ID: ${requestId ?? "pending"}`}
+        meta={translate(profileTranslationKeys.routeStatus.provisioningMeta, {
+          requestId:
+            requestId
+            ?? translate(profileTranslationKeys.routeStatus.provisioningTracePending),
+        })}
         role="status"
         announce="polite"
         className={className}
@@ -49,15 +61,19 @@ export function ProfileRouteStatusPanel({
 
   return (
     <StatusPanel
-      title="We could not load your profile settings"
+      title={translate(profileTranslationKeys.routeStatus.errorTitle)}
       description={
-        "The profile route could not load your settings in the current browser session. Retry the load to continue."
+        translate(profileTranslationKeys.routeStatus.errorDescription)
       }
-      meta={`Attempts: ${attempts} | Trace ID: ${requestId ?? "unavailable"}`}
+      meta={translate(profileTranslationKeys.routeStatus.errorMeta, {
+        attempts,
+        requestId:
+          requestId ?? translate(profileTranslationKeys.routeStatus.errorTraceUnavailable),
+      })}
       tone="danger"
       role="alert"
       announce="assertive"
-      actionLabel="Retry loading profile"
+      actionLabel={translate(profileTranslationKeys.routeStatus.retryAction)}
       onAction={onRetry}
       actionDisabled={retryDisabled}
       className={className}

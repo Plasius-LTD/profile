@@ -5,13 +5,32 @@ import type { UserEntity } from "@plasius/entity-manager";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AvatarUploadPanel } from "../src/components/avatar-upload-panel/index.js";
 
-const { dispatchMock, storeState, uploadAvatarMock, validateAvatarFileMock } = vi.hoisted(() => ({
+const {
+  dispatchMock,
+  storeState,
+  translationOverrides,
+  uploadAvatarMock,
+  validateAvatarFileMock,
+} = vi.hoisted(() => ({
   dispatchMock: vi.fn(),
   storeState: {
     user: null as UserEntity | null,
   },
+  translationOverrides: new Map<string, string>(),
   uploadAvatarMock: vi.fn(),
   validateAvatarFileMock: vi.fn(),
+}));
+
+vi.mock("@plasius/translations", () => ({
+  useI18n: () => ({
+    t: (key: string, args: Record<string, string | number | boolean> = {}) => {
+      const value = translationOverrides.get(key) ?? key;
+      return value.replace(/\{(\w+)\}/g, (_match, placeholder: string) => {
+        const replacement = args[placeholder];
+        return replacement === undefined ? `{${placeholder}}` : String(replacement);
+      });
+    },
+  }),
 }));
 
 vi.mock("../src/UserProvider.js", () => ({
@@ -52,6 +71,7 @@ function createUser(overrides: Partial<UserEntity> = {}): UserEntity {
 describe("AvatarUploadPanel", () => {
   beforeEach(() => {
     dispatchMock.mockReset();
+    translationOverrides.clear();
     uploadAvatarMock.mockReset();
     validateAvatarFileMock.mockReset();
     validateAvatarFileMock.mockResolvedValue(null);
@@ -142,6 +162,42 @@ describe("AvatarUploadPanel", () => {
     expect(
       screen.getByText("Avatar uploaded successfully as avatar.png."),
     ).toBeTruthy();
+  });
+
+  it("uses provider translations for package-owned default labels", () => {
+    translationOverrides.set("profile.avatarUpload.title", "Profile photo");
+    translationOverrides.set("profile.avatarUpload.input.label", "Pick profile image");
+
+    render(
+      <AvatarUploadPanel
+        accept="image/png"
+        constraintsDescription="Use a PNG image."
+        validateAvatarFile={validateAvatarFileMock}
+        uploadAvatar={uploadAvatarMock}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Profile photo" })).toBeTruthy();
+    expect(screen.getByLabelText("Pick profile image")).toBeTruthy();
+  });
+
+  it("ignores file input changes when no avatar file is selected", () => {
+    render(
+      <AvatarUploadPanel
+        accept="image/png"
+        constraintsDescription="Use a PNG image."
+        validateAvatarFile={validateAvatarFileMock}
+        uploadAvatar={uploadAvatarMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Choose an avatar image"), {
+      target: { files: [] },
+    });
+
+    expect(validateAvatarFileMock).not.toHaveBeenCalled();
+    expect(uploadAvatarMock).not.toHaveBeenCalled();
+    expect(dispatchMock).not.toHaveBeenCalled();
   });
 
   it("shows validation errors before invoking the upload adapter", async () => {

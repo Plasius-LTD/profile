@@ -32,6 +32,7 @@ import {
   UserProvider,
   createAccessibleActionBindings,
   createAccessibleFieldBindings,
+  profileTranslations,
 } from "@plasius/profile";
 ```
 
@@ -66,6 +67,29 @@ const settingsClient: SettingsDataClient = {
 ```
 
 If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius/auth/useAuthorizedFetch`.
+
+### Translation bundles
+
+Package-owned UI copy is exposed as `profileTranslations` and stable
+`profileTranslationKeys` for host applications that use
+`@plasius/translations`.
+
+```tsx
+import { I18nProvider, getTranslator } from "@plasius/translations";
+import { profileTranslations } from "@plasius/profile";
+
+getTranslator().loadTranslations("en-GB", profileTranslations["en-GB"], {
+  replace: false,
+});
+
+<I18nProvider initialLang="en-GB">
+  <ProfileRouteStatusPanel variant="loading" />
+</I18nProvider>;
+```
+
+The React components fall back to the packaged `en-GB` defaults when a host
+translator has not loaded those keys. Host-supplied props such as
+`AvatarUploadPanel` labels and descriptions remain explicit overrides.
 
 Profile-specific route shells are also exported so host applications can keep route state locally while reusing package-owned copy and composition:
 
