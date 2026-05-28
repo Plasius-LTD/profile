@@ -17,6 +17,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - `SettingsPage` and `AvatarUploadPanel` now consume shared accessibility bindings instead of duplicating ad hoc ARIA wiring.
 
 - **Fixed**
+  - Restored the package CD workflow so protected main releases are prepared by PR and published without direct branch pushes.
   - Save and provider validation fallback messages now expose stable translation metadata/defaults instead of relying on embedded English literals.
   - Package accessibility coverage now verifies reusable destructive-action affordance semantics alongside field-level validation and live-announcement behavior.
 
