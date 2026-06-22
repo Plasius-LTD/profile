@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.36] - 2026-06-22
+
+- **Added**
   - Added package-owned `en-GB` translation dictionaries and exported profile translation keys/default lookup helpers for settings, avatar upload, route status, accessibility, and save/provider error surfaces.
   - Exported reusable accessibility helpers for stable field labeling/error associations and destructive-action semantics so host profile/account flows can stay aligned with the package-owned settings surface.
 
@@ -394,7 +408,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.33...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.36...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -433,3 +447,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.31]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.31
 [1.0.32]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.32
 [1.0.33]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.33
+[1.0.36]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.36
