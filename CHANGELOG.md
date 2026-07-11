@@ -12,6 +12,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.38] - 2026-07-11
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
   - Refreshed direct runtime and development dependencies to the latest stable published versions available for the repository's compatibility constraints.
   - Retained TypeScript 6.x because the latest `@typescript-eslint/parser` release requires TypeScript `<6.1.0`; TypeScript 7.x is not a reproducible clean-install baseline until that peer range is updated upstream.
 
@@ -423,7 +437,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.37...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.38...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -464,3 +478,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.33]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.33
 [1.0.36]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.36
 [1.0.37]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.37
+[1.0.38]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.38
