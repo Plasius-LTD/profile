@@ -36,10 +36,10 @@
     "@plasius/auth": "^1.0.19",
     "@plasius/entity-manager": "^1.0.22",
     "@plasius/environment": "^1.0.20",
-    "@plasius/react-query": "^1.0.21",
+    "@plasius/react-query": "^1.0.22",
     "@plasius/react-state": "^1.2.17",
     "@plasius/schema": "^1.2.17",
-    "@plasius/sharedcomponents": "^1.0.21",
+    "@plasius/sharedcomponents": "^1.0.22",
     "@plasius/translations": "^1.0.22"
   },
   "devDependencies": {
