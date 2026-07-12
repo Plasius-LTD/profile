@@ -12,6 +12,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.39] - 2026-07-12
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
   - Refreshed `@plasius/react-query` and `@plasius/sharedcomponents` to the latest published stable versions.
 
 - **Fixed**
@@ -437,7 +451,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.38...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.39...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -479,3 +493,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.36]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.36
 [1.0.37]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.37
 [1.0.38]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.38
+[1.0.39]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.39
