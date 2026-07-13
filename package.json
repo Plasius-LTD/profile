@@ -33,14 +33,14 @@
     "react": "^19"
   },
   "dependencies": {
-    "@plasius/auth": "^1.0.19",
-    "@plasius/entity-manager": "^1.0.22",
+    "@plasius/auth": "^1.0.20",
+    "@plasius/entity-manager": "^1.0.23",
     "@plasius/environment": "^1.0.20",
-    "@plasius/react-query": "^1.0.22",
+    "@plasius/react-query": "^1.0.23",
     "@plasius/react-state": "^1.2.17",
-    "@plasius/schema": "^1.2.17",
-    "@plasius/sharedcomponents": "^1.0.22",
-    "@plasius/translations": "^1.0.22"
+    "@plasius/schema": "^1.2.18",
+    "@plasius/sharedcomponents": "^1.0.23",
+    "@plasius/translations": "^1.0.23"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -12,7 +12,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
-  - (placeholder)
+  - Updated direct RFC-compliance dependencies to their newly published releases (`@plasius/auth` 1.0.20, `@plasius/entity-manager` 1.0.23, `@plasius/react-query` 1.0.23, `@plasius/schema` 1.2.18, `@plasius/sharedcomponents` 1.0.23, and `@plasius/translations` 1.0.23) for task #30.
 
 - **Fixed**
   - (placeholder)
