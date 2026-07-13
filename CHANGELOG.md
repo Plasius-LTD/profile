@@ -12,6 +12,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.40] - 2026-07-13
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
   - Updated direct RFC-compliance dependencies to their newly published releases (`@plasius/auth` 1.0.20, `@plasius/entity-manager` 1.0.23, `@plasius/react-query` 1.0.23, `@plasius/schema` 1.2.18, `@plasius/sharedcomponents` 1.0.23, and `@plasius/translations` 1.0.23) for task #30.
 
 - **Fixed**
@@ -451,7 +465,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.39...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.40...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -494,3 +508,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.37]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.37
 [1.0.38]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.38
 [1.0.39]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.39
+[1.0.40]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.40
