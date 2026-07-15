@@ -17,6 +17,8 @@ describe("profile translations", () => {
     });
 
     expect(i18n.t(profileTranslationKeys.settings.heading)).toBe("Profile settings");
+    expect(i18n.t(profileTranslationKeys.tokenOverview.heading)).toBe("Tokens");
+    expect(i18n.t(profileTranslationKeys.tokenOverview.activityCredit)).toBe("Credit");
     expect(
       i18n.t(profileTranslationKeys.avatarUpload.success, {
         fileName: "avatar.png",

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { execSync } = require("node:child_process");
+const { execFileSync, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -18,7 +18,16 @@ function main() {
   const paths = files.map((entry) => entry.path);
 
   verifyCjsMetadata();
+  verifyTokenSubpathMetadata();
+  verifyTokenRuntimeEntrypoints();
   ensureTarballIncludes(paths, "dist-cjs/package.json");
+  ensureTarballIncludes(paths, "dist/tokens.js");
+  ensureTarballIncludes(paths, "dist/tokens.d.ts");
+  ensureTarballIncludes(paths, "dist-cjs/tokens.js");
+  ensureTarballIncludes(
+    paths,
+    "dist/components/token-overview-panel/TokenOverviewPanel.css"
+  );
 
   const forbiddenTarballPathPatterns = [
     {
@@ -124,6 +133,58 @@ function verifyCjsMetadata() {
     );
     process.exit(1);
   }
+}
+
+function verifyTokenSubpathMetadata() {
+  const packageJson = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), "package.json"), "utf8")
+  );
+  const tokenExport = packageJson.exports?.["./tokens"];
+
+  if (
+    tokenExport?.types !== "./dist/tokens.d.ts" ||
+    tokenExport?.import !== "./dist/tokens.js" ||
+    tokenExport?.require !== "./dist-cjs/tokens.js" ||
+    packageJson.exports?.["./tokens.css"] !==
+      "./dist/components/token-overview-panel/TokenOverviewPanel.css"
+  ) {
+    console.error(
+      "Public package check failed. The ./tokens export must map ESM, CJS, and types."
+    );
+    process.exit(1);
+  }
+}
+
+function verifyTokenRuntimeEntrypoints() {
+  const requiredExports = [
+    "TokenOverviewPanel",
+    "createTokenEconomyPresentation",
+    "createProfileTranslationResolver",
+  ];
+  const assertion = `
+    const missing = ${JSON.stringify(requiredExports)}.filter(
+      (name) => typeof moduleUnderTest[name] !== "function"
+    );
+    if (missing.length > 0) throw new Error("Missing exports: " + missing.join(", "));
+  `;
+
+  execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "--eval",
+      `const moduleUnderTest = await import("@plasius/profile/tokens");${assertion}`,
+    ],
+    { cwd: process.cwd(), stdio: "pipe" }
+  );
+  execFileSync(
+    process.execPath,
+    [
+      "--eval",
+      `const moduleUnderTest = require("@plasius/profile/tokens");${assertion}`,
+    ],
+    { cwd: process.cwd(), stdio: "pipe" }
+  );
 }
 
 function ensureTarballIncludes(paths, requiredPath) {

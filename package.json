@@ -7,21 +7,21 @@
   "type": "module",
   "description": "User Profile component for Plasius projects",
   "scripts": {
-    "build": "tsc --build --listEmittedFiles && rsync -av --include '*/' --include '*.module.css' --exclude '*' src/ dist/ || true && npm run build:cjs",
+    "build": "tsc --build --listEmittedFiles && rsync -av --include '*/' --include '*.css' --exclude '*' src/ dist/ || true && npm run build:cjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.token-tests.json --noEmit",
     "test:coverage": "vitest run --coverage",
     "test:coverage:watch": "vitest --coverage",
     "clean": "rimraf dist-cjs dist tsconfig.tsbuildinfo",
     "reset:clean": "rm -rf node_modules package-lock.json && npm run clean",
-    "audit:ts": "tsc --noEmit --pretty",
+    "audit:ts": "tsc --noEmit --pretty && tsc -p tsconfig.token-tests.json --noEmit --pretty",
     "audit:eslint": "eslint . --max-warnings=0",
     "audit:deps": "npm ls --all --omit=optional --omit=peer > /dev/null 2>&1 || true",
     "audit:npm": "npm audit --audit-level=high --omit=dev",
     "audit:test": "vitest run --coverage",
     "audit:all": "npm-run-all -l audit:ts audit:eslint audit:deps audit:npm audit:test",
-    "build:cjs": "tsc -p tsconfig.json --module commonjs --moduleResolution node --outDir dist-cjs --tsBuildInfoFile dist-cjs/tsconfig.tsbuildinfo --listEmittedFiles && rsync -av --include '*/' --include '*.module.css' --exclude '*' src/ dist-cjs/ || true && node scripts/write-cjs-package-json.cjs",
+    "build:cjs": "tsc -p tsconfig.json --module commonjs --moduleResolution node --outDir dist-cjs --tsBuildInfoFile dist-cjs/tsconfig.tsbuildinfo --listEmittedFiles && rsync -av --include '*/' --include '*.css' --exclude '*' src/ dist-cjs/ || true && node scripts/write-cjs-package-json.cjs",
     "lint": "eslint . --max-warnings=0",
     "prepare": "npm run build",
     "pack:check": "node scripts/verify-public-package.cjs",
@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@plasius/auth": "^1.0.20",
+    "@plasius/economy": "^0.2.0",
     "@plasius/entity-manager": "^1.0.23",
     "@plasius/environment": "^1.0.20",
     "@plasius/react-query": "^1.0.23",
@@ -65,7 +66,7 @@
     "zod": "^4.4.3"
   },
   "sideEffects": [
-    "*.css"
+    "**/*.css"
   ],
   "exports": {
     ".": {
@@ -78,6 +79,12 @@
       "import": "./dist/profile-save.js",
       "require": "./dist-cjs/profile-save.js"
     },
+    "./tokens": {
+      "types": "./dist/tokens.d.ts",
+      "import": "./dist/tokens.js",
+      "require": "./dist-cjs/tokens.js"
+    },
+    "./tokens.css": "./dist/components/token-overview-panel/TokenOverviewPanel.css",
     "./package.json": "./package.json"
   },
   "module": "./dist/index.js",

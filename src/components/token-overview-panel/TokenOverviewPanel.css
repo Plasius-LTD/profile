@@ -1,0 +1,249 @@
+.plasiusTokenOverviewPanel_panel {
+  display: grid;
+  gap: 1rem;
+  color: var(--token-panel-text, #f8fafc);
+}
+
+.plasiusTokenOverviewPanel_panelHeader,
+.plasiusTokenOverviewPanel_section,
+.plasiusTokenOverviewPanel_statePanel {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.plasiusTokenOverviewPanel_panelHeader,
+.plasiusTokenOverviewPanel_section,
+.plasiusTokenOverviewPanel_statePanel,
+.plasiusTokenOverviewPanel_activityCard,
+.plasiusTokenOverviewPanel_statusCard,
+.plasiusTokenOverviewPanel_actionCard,
+.plasiusTokenOverviewPanel_unavailableCard {
+  border: 1px solid var(--token-panel-border, #475569);
+  border-radius: 0.75rem;
+  background: var(--token-panel-background, #0f172a);
+}
+
+.plasiusTokenOverviewPanel_panelHeader,
+.plasiusTokenOverviewPanel_section,
+.plasiusTokenOverviewPanel_statePanel {
+  padding: 1rem;
+}
+
+.plasiusTokenOverviewPanel_panelHeading,
+.plasiusTokenOverviewPanel_sectionHeading,
+.plasiusTokenOverviewPanel_activityHeading,
+.plasiusTokenOverviewPanel_panelDescription,
+.plasiusTokenOverviewPanel_statePanel p,
+.plasiusTokenOverviewPanel_statusCard p,
+.plasiusTokenOverviewPanel_actionCard p,
+.plasiusTokenOverviewPanel_unavailableCard p,
+.plasiusTokenOverviewPanel_activityAmount,
+.plasiusTokenOverviewPanel_emptyActivity {
+  margin: 0;
+}
+
+.plasiusTokenOverviewPanel_panelHeading {
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.plasiusTokenOverviewPanel_panelDescription,
+.plasiusTokenOverviewPanel_statePanel p,
+.plasiusTokenOverviewPanel_statusCard p,
+.plasiusTokenOverviewPanel_actionCard p,
+.plasiusTokenOverviewPanel_unavailableCard p,
+.plasiusTokenOverviewPanel_emptyActivity {
+  color: var(--token-panel-muted-text, #dbeafe);
+}
+
+.plasiusTokenOverviewPanel_sectionHeader,
+.plasiusTokenOverviewPanel_activityHeader {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.plasiusTokenOverviewPanel_sectionHeading {
+  font-size: 1.1rem;
+}
+
+.plasiusTokenOverviewPanel_amountGrid,
+.plasiusTokenOverviewPanel_activityMetadata {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.plasiusTokenOverviewPanel_amountGrid {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.plasiusTokenOverviewPanel_amountDefinition {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--token-panel-surface, #1e293b);
+}
+
+.plasiusTokenOverviewPanel_amountDefinition dt,
+.plasiusTokenOverviewPanel_activityMetadata dt {
+  color: var(--token-panel-muted-text, #dbeafe);
+  font-size: 0.85rem;
+}
+
+.plasiusTokenOverviewPanel_amountDefinition dd,
+.plasiusTokenOverviewPanel_activityMetadata dd {
+  margin: 0;
+}
+
+.plasiusTokenOverviewPanel_amountDefinition dd {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.plasiusTokenOverviewPanel_cardList,
+.plasiusTokenOverviewPanel_activityList {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plasiusTokenOverviewPanel_cardList {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.plasiusTokenOverviewPanel_statusCard,
+.plasiusTokenOverviewPanel_actionCard,
+.plasiusTokenOverviewPanel_unavailableCard,
+.plasiusTokenOverviewPanel_activityCard {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  background: var(--token-panel-surface, #1e293b);
+}
+
+.plasiusTokenOverviewPanel_statusCard[data-tone="positive"] {
+  border-inline-start: 0.35rem solid var(--token-panel-positive, #86efac);
+}
+
+.plasiusTokenOverviewPanel_statusCard[data-tone="warning"] {
+  border-inline-start: 0.35rem solid var(--token-panel-warning, #fde68a);
+}
+
+.plasiusTokenOverviewPanel_disabledReason,
+.plasiusTokenOverviewPanel_unavailableStatus {
+  font-weight: 700;
+}
+
+.plasiusTokenOverviewPanel_unavailableCard .plasiusTokenOverviewPanel_unavailableStatus {
+  color: var(--token-panel-warning, #fde68a);
+}
+
+.plasiusTokenOverviewPanel_activityHeading {
+  font-size: 1rem;
+}
+
+.plasiusTokenOverviewPanel_activityAmount {
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.plasiusTokenOverviewPanel_activityAmount[data-direction="credit"] {
+  color: var(--token-panel-credit, #bbf7d0);
+}
+
+.plasiusTokenOverviewPanel_activityAmount[data-direction="debit"] {
+  color: var(--token-panel-debit, #fecaca);
+}
+
+.plasiusTokenOverviewPanel_directionLabel {
+  text-decoration: underline;
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.18em;
+}
+
+.plasiusTokenOverviewPanel_activityMetadata {
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.plasiusTokenOverviewPanel_activityMetadata > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.plasiusTokenOverviewPanel_primaryAction,
+.plasiusTokenOverviewPanel_secondaryAction,
+.plasiusTokenOverviewPanel_textAction {
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plasiusTokenOverviewPanel_primaryAction,
+.plasiusTokenOverviewPanel_secondaryAction {
+  padding: 0.55rem 0.8rem;
+  border: 2px solid transparent;
+}
+
+.plasiusTokenOverviewPanel_primaryAction {
+  color: var(--token-action-text, #082f49);
+  background: var(--token-action-background, #7dd3fc);
+}
+
+.plasiusTokenOverviewPanel_secondaryAction {
+  color: var(--token-secondary-action-text, #f8fafc);
+  border-color: var(--token-panel-border, #64748b);
+  background: transparent;
+}
+
+.plasiusTokenOverviewPanel_textAction {
+  padding: 0.35rem 0;
+  color: var(--token-link-text, #bae6fd);
+  border: 0;
+  background: transparent;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.plasiusTokenOverviewPanel_primaryAction:focus-visible,
+.plasiusTokenOverviewPanel_secondaryAction:focus-visible,
+.plasiusTokenOverviewPanel_textAction:focus-visible {
+  outline: 3px solid var(--token-focus-ring, #fef08a);
+  outline-offset: 3px;
+}
+
+.plasiusTokenOverviewPanel_primaryAction:disabled,
+.plasiusTokenOverviewPanel_secondaryAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.plasiusTokenOverviewPanel_visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 42rem) {
+  .plasiusTokenOverviewPanel_sectionHeader,
+  .plasiusTokenOverviewPanel_activityHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .plasiusTokenOverviewPanel_activityAmount {
+    white-space: normal;
+  }
+}
