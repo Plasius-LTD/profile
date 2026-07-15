@@ -9,10 +9,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Added the prop-driven `TokenOverviewPanel`, exact BigInt TokenSubunit formatting, presentation contracts for balances, totals, status, activity, acquisition actions, and unavailable uses, plus accessible loading, error, empty, and refresh states for task #33.
+  - Added package-owned `en-GB` Token overview translation keys and a label factory that lets hosts supply localized copy explicitly.
+  - Added a runtime-validating adapter from released `@plasius/economy` contracts, stable activity filters, and public-entrypoint coverage.
 
 - **Changed**
-  - (placeholder)
+  - Exported a lazy-loadable `@plasius/profile/tokens` subpath plus explicit `@plasius/profile/tokens.css` stylesheet; both ESM and CommonJS JavaScript entrypoints are runtime-verified without executing CSS, while economy fetching, providers, storage, profile autosave, balance derivation, flags, and authorization remain outside `@plasius/profile`.
+  - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
 
 - **Fixed**
   - (placeholder)

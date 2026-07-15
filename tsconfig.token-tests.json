@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "tests/i18n.tests.ts",
+    "tests/public-entrypoint.tests.ts",
+    "tests/token-economy-adapter.tests.ts",
+    "tests/token-overview-panel.accessibility.tests.tsx",
+    "tests/token-overview-panel.tests.tsx"
+  ]
+}

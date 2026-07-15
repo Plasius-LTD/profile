@@ -29,9 +29,12 @@ When CJS output is emitted under `dist-cjs/*.js` with `type: module`, `dist-cjs/
 import {
   ProfileRouteStatusPanel,
   SettingsProvider,
+  TokenOverviewPanel,
   UserProvider,
   createAccessibleActionBindings,
   createAccessibleFieldBindings,
+  createTokenEconomyPresentation,
+  createTokenOverviewPanelLabels,
   profileTranslations,
 } from "@plasius/profile";
 ```
@@ -123,6 +126,91 @@ const actionA11y = createAccessibleActionBindings({
 ```
 
 The package task for feature `Plasius-LTD/plasius-ltd-site#706` inherits the parent rollout flag `profile.account.accessibility.enabled`; host applications remain responsible for evaluating that flag and deciding when to expose new accessibility-hardened flows.
+
+### Token wallet presentation
+
+`TokenOverviewPanel` is a prop-driven presentation boundary for site-owned Token
+wallet data. It does not fetch, initialize payment or reward providers, use
+browser storage, read `UserEntity`/`UserProvider`, autosave, or calculate a
+balance. The host remains responsible for authentication, capability and
+feature-flag decisions, authoritative API validation, and localized activity
+copy.
+
+`createTokenEconomyPresentation` accepts the released `@plasius/economy`
+wallet-summary, lifetime-total, and activity contracts. It validates those
+contracts at runtime, preserves stable activity/status keys for filtering, and
+maps signed journal amounts to explicit Credit/Debit presentation values. It is
+still a pure presentation adapter: it performs no network or economy command.
+The same exports are available from `@plasius/profile/tokens`, allowing the host
+route to lazy-load the Token boundary without importing unrelated profile UI.
+`filterTokenActivityPresentations` supports activity type, status, stable
+`TokenSource`, beneficiary account, masked reference, and inclusive-lower/
+exclusive-upper UTC date filters without coupling localized labels to ledger
+behavior.
+
+All amount props contain non-negative TokenSubunits as canonical base-10 integer
+strings. Balances and lifetime totals are bounded by signed 64-bit maximum;
+activity magnitudes also represent the exact absolute value of signed 64-bit
+minimum. Values are formatted with `BigInt`, using exactly 1,000 TokenSubunits
+per displayed Token without passing the amount through a JavaScript `number`.
+
+```tsx
+import "@plasius/profile/tokens.css";
+import {
+  TokenOverviewPanel,
+  createProfileTranslationResolver,
+  createTokenEconomyPresentation,
+  createTokenOverviewPanelLabels,
+} from "@plasius/profile/tokens";
+import { useI18n } from "@plasius/translations";
+
+function WalletSummary() {
+  const { t } = useI18n();
+  const labels = createTokenOverviewPanelLabels(
+    createProfileTranslationResolver(t),
+  );
+  const presentation = createTokenEconomyPresentation({
+    balances: authoritativeWalletSummary,
+    lifetimeTotals: authoritativeLifetimeTotals,
+    activities: authoritativeActivityPage.items,
+    resolvers: localizedEconomyResolvers,
+  });
+
+  return (
+    <TokenOverviewPanel
+      state="ready"
+      labels={labels}
+      balances={presentation.balances}
+      lifetimeTotals={presentation.lifetimeTotals}
+      activities={presentation.activities}
+      statuses={localizedWalletStatuses}
+      actions={localizedAcquisitionActions}
+      unavailableUses={localizedUnavailableUses}
+      balanceAnnouncement={localizedBalanceAnnouncement}
+      onRefresh={refreshAuthoritativeWallet}
+      onAction={(actionId) => openHostOwnedAction(actionId)}
+      onActivitySelect={(activityId) => openActivity(activityId)}
+    />
+  );
+}
+```
+
+The stylesheet is an explicit side-effect export. Keeping it separate makes the
+ESM and CommonJS JavaScript entrypoints loadable in non-bundler runtimes while
+allowing Vite/Webpack hosts to include the prefixed component styles in the
+lazy route chunk.
+
+The discriminated `state` prop also provides dedicated `loading`, `error`, and
+`empty` presentations. In the ready state, balances and lifetime values use
+semantic description lists and `<data>` elements; activity uses an ordered list,
+semantic `<time>` values, and visible Credit/Debit text. Hosts can pass
+`isRefreshing` and `balanceAnnouncement` to update the panel's polite live
+region, and receive all refresh/action/activity selections through callbacks.
+
+The parent rollout flag is `economy.tokens.enabled`; hosts must also require the
+appropriate wallet capability before mounting the component. Rollback is a host
+decision that hides or makes the route read-only. This package never interprets
+the flag or capability and never mutates economy state.
 
 ## Development
 

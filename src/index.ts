@@ -6,3 +6,4 @@ export * from "./profile-save.js";
 export * from "./Pages/Settings/index.js";
 export * from "./components/avatar-upload-panel/index.js";
 export * from "./components/profile-route-status-panel/index.js";
+export * from "./components/token-overview-panel/index.js";
