@@ -137,7 +137,7 @@ feature-flag decisions, authoritative API validation, and localized activity
 copy.
 
 `createTokenEconomyPresentation` accepts the released `@plasius/economy`
-wallet-summary, lifetime-total, and activity contracts. It validates those
+`^0.3.1` wallet-summary, lifetime-total, and activity contracts. It validates those
 contracts at runtime, preserves stable activity/status keys for filtering, and
 maps signed journal amounts to explicit Credit/Debit presentation values. It is
 still a pure presentation adapter: it performs no network or economy command.

@@ -16,6 +16,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 - **Changed**
   - Exported a lazy-loadable `@plasius/profile/tokens` subpath plus explicit `@plasius/profile/tokens.css` stylesheet; both ESM and CommonJS JavaScript entrypoints are runtime-verified without executing CSS, while economy fetching, providers, storage, profile autosave, balance derivation, flags, and authorization remain outside `@plasius/profile`.
   - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
+  - Updated the runtime contract dependency to approved `@plasius/economy` `^0.3.1` while retaining the V1 wallet-summary, lifetime-total, and activity presentation boundary.
 
 - **Fixed**
   - (placeholder)
