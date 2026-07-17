@@ -202,6 +202,76 @@ describe("TokenOverviewPanel", () => {
     expect(screen.getByText("Unavailable")).toBeTruthy();
   });
 
+  it("renders portfolio wallet components as visibly separate balance groups", () => {
+    render(
+      <TokenOverviewPanel
+        {...createReadyProps({
+          walletComponents: [
+            {
+              walletId: "wallet:household",
+              role: "household-treasury",
+              label: "Household treasury",
+              balances: {
+                availableSubunits: "50000",
+                reservedSubunits: "10000",
+                heldSubunits: "500",
+                rewardProgressSubunits: "275",
+              },
+              lifetimeTotals: {
+                boughtSubunits: "50000",
+                earnedSubunits: "0",
+                allocatedSubunits: "10000",
+                reclaimedSubunits: "1000",
+                spentSubunits: "0",
+                reversedSubunits: "500",
+              },
+            },
+            {
+              walletId: "wallet:gameplay",
+              role: "gameplay-allocation",
+              label: "Gameplay allocation",
+              beneficiaryAccountId: "account:child",
+              beneficiaryLabel: "Alex",
+              balances: {
+                availableSubunits: "5000",
+                reservedSubunits: "0",
+                heldSubunits: "0",
+                rewardProgressSubunits: "0",
+              },
+              lifetimeTotals: {
+                boughtSubunits: "0",
+                earnedSubunits: "0",
+                allocatedSubunits: "5000",
+                reclaimedSubunits: "0",
+                spentSubunits: "0",
+                reversedSubunits: "0",
+              },
+            },
+          ],
+        })}
+      />,
+    );
+
+    const householdHeading = screen.getByRole("heading", {
+      name: "Household treasury",
+    });
+    const householdCard = householdHeading.closest("li");
+    const gameplayHeading = screen.getByRole("heading", {
+      name: "Gameplay allocation",
+    });
+    const gameplayCard = gameplayHeading.closest("li");
+
+    expect(householdCard).not.toBeNull();
+    expect(gameplayCard).not.toBeNull();
+    expect(
+      within(householdCard as HTMLElement).getByText("50 Tokens"),
+    ).toBeTruthy();
+    expect(
+      within(gameplayCard as HTMLElement).getByText("5 Tokens"),
+    ).toBeTruthy();
+    expect(within(gameplayCard as HTMLElement).getByText("Alex")).toBeTruthy();
+  });
+
   it("renders a localized activity empty state while retaining zero balances", () => {
     render(
       <TokenOverviewPanel

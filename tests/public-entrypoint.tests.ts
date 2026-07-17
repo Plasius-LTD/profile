@@ -11,6 +11,9 @@ describe("public package entrypoint", () => {
     expect(profile.TokenOverviewPanel).toBeTypeOf("function");
     expect(profile.createTokenOverviewPanelLabels).toBeTypeOf("function");
     expect(profile.createTokenEconomyPresentation).toBeTypeOf("function");
+    expect(profile.createTokenPortfolioEconomyPresentation).toBeTypeOf(
+      "function",
+    );
     expect(profile.filterTokenActivityPresentations).toBeTypeOf("function");
   });
 
@@ -19,6 +22,9 @@ describe("public package entrypoint", () => {
 
     expect(tokens.TokenOverviewPanel).toBeTypeOf("function");
     expect(tokens.createTokenEconomyPresentation).toBeTypeOf("function");
+    expect(tokens.createTokenPortfolioEconomyPresentation).toBeTypeOf(
+      "function",
+    );
     expect(tokens.createProfileTranslationResolver).toBeTypeOf("function");
   });
 });

@@ -34,6 +34,7 @@ import {
   createAccessibleActionBindings,
   createAccessibleFieldBindings,
   createTokenEconomyPresentation,
+  createTokenPortfolioEconomyPresentation,
   createTokenOverviewPanelLabels,
   profileTranslations,
 } from "@plasius/profile";
@@ -136,11 +137,20 @@ balance. The host remains responsible for authentication, capability and
 feature-flag decisions, authoritative API validation, and localized activity
 copy.
 
-`createTokenEconomyPresentation` accepts the released `@plasius/economy`
-`^0.3.1` wallet-summary, lifetime-total, and activity contracts. It validates those
-contracts at runtime, preserves stable activity/status keys for filtering, and
-maps signed journal amounts to explicit Credit/Debit presentation values. It is
-still a pure presentation adapter: it performs no network or economy command.
+`createTokenEconomyPresentation` retains the original single-wallet adapter
+against the released `@plasius/economy` `^0.3.1` wallet-summary,
+lifetime-total, and activity contracts. The additive
+`createTokenPortfolioEconomyPresentation` entry point accepts
+`WalletPortfolioSummaryV1`, `WalletPortfolioLifetimeV1`, and discriminated
+`WalletActivityEntryV1` rows. It preserves the authoritative component order,
+wallet role, beneficiary boundary, and economic/workflow identity while using
+the validated portfolio totals for the overview. Activity rows never contribute
+to balances or lifetime metrics.
+
+Both adapters validate their contracts at runtime, preserve stable
+activity/status keys for filtering, and map signed amounts to explicit
+Credit/Debit presentation values. They remain pure presentation adapters: they
+perform no network or economy command.
 The same exports are available from `@plasius/profile/tokens`, allowing the host
 route to lazy-load the Token boundary without importing unrelated profile UI.
 `filterTokenActivityPresentations` supports activity type, status, stable
@@ -195,17 +205,49 @@ function WalletSummary() {
 }
 ```
 
+For an account-aware portfolio, supply host-localized component labels and pass
+the separated component presentation to the same panel:
+
+```tsx
+const presentation = createTokenPortfolioEconomyPresentation({
+  portfolioSummary: authoritativePortfolioSummary,
+  portfolioLifetime: authoritativePortfolioLifetime,
+  activities: authoritativeActivityPage.entries,
+  resolvers: {
+    ...localizedEconomyResolvers,
+    componentLabel: (role, beneficiaryAccountId) =>
+      localizeWalletRole(role, beneficiaryAccountId),
+  },
+});
+
+<TokenOverviewPanel
+  state="ready"
+  labels={labels}
+  balances={presentation.balances}
+  lifetimeTotals={presentation.lifetimeTotals}
+  walletComponents={presentation.walletComponents}
+  activities={presentation.activities}
+/>;
+```
+
+The adapter aligns lifetime components by `walletId` rather than array position
+and rejects mismatched portfolio, subject, role, beneficiary, or activity-wallet
+boundaries. Workflow rows retain `entryKind: "workflow"` and their `commandId`;
+economic rows retain their `transactionId`. Pending and failed workflow amounts
+are presentation context only and cannot affect the supplied projections.
+
 The stylesheet is an explicit side-effect export. Keeping it separate makes the
 ESM and CommonJS JavaScript entrypoints loadable in non-bundler runtimes while
 allowing Vite/Webpack hosts to include the prefixed component styles in the
 lazy route chunk.
 
 The discriminated `state` prop also provides dedicated `loading`, `error`, and
-`empty` presentations. In the ready state, balances and lifetime values use
-semantic description lists and `<data>` elements; activity uses an ordered list,
-semantic `<time>` values, and visible Credit/Debit text. Hosts can pass
-`isRefreshing` and `balanceAnnouncement` to update the panel's polite live
-region, and receive all refresh/action/activity selections through callbacks.
+`empty` presentations. In the ready state, aggregate balances, separated wallet
+components, and lifetime values use semantic lists, description lists, and
+`<data>` elements; activity uses an ordered list, semantic `<time>` values, and
+visible Credit/Debit text. Hosts can pass `isRefreshing` and
+`balanceAnnouncement` to update the panel's polite live region, and receive all
+refresh/action/activity selections through callbacks.
 
 The parent rollout flag is `economy.tokens.enabled`; hosts must also require the
 appropriate wallet capability before mounting the component. Rollback is a host
