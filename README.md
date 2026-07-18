@@ -75,8 +75,10 @@ If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius
 
 `SettingsPage` keeps its self-service defaults when rendered without new props.
 Hosts that need an explicit review/commit flow can supply `onSubmit`, controlled
-busy/error state, and declarative field/action policies. The callback runs only
-after the current profile snapshot passes the package schema.
+busy/error state, and declarative field/action policies. Supplying `onSubmit`
+switches field and avatar changes to a component-local draft, so they do not
+enter `UserStore` or trigger provider autosave before the host reviews them. The
+callback runs only after that draft passes the package schema.
 
 ```tsx
 <SettingsPage
@@ -113,6 +115,12 @@ before/after change in its own review surface before `onSubmit` persists it.
 An async `onSubmit` disables the package controls while pending. Rejections use
 package-owned generic copy so internal errors are not disclosed; a host can
 supply display-safe `submitError` text for controlled failures.
+
+When the submit action is hidden, implicit form submission is also blocked.
+Only an explicit submit control outside the form that references `formId` can
+invoke the host callback. Validation failures belonging to hidden fields are
+promoted to the form-level error summary, so policy-driven hiding cannot conceal
+an invalid draft from the reviewer.
 
 These policies govern presentation only. A host must still evaluate its stored
 feature flag and authoritative capabilities, constrain the submitted DTO, and
