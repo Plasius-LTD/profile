@@ -151,6 +151,28 @@ describe("profile accessibility baseline", () => {
     expect(result.violations).toEqual([]);
   });
 
+  it("admin-safe profile field and avatar policies have no automated axe violations", async () => {
+    const { container } = render(
+      <SettingsPage
+        fieldPolicies={{
+          avatar: "read-only",
+          email: "read-only",
+          emailPreferences: "hidden",
+        }}
+        actionPolicies={{
+          avatarUpload: "hidden",
+          avatarRemove: "enabled",
+          submit: "hidden",
+        }}
+        submitError="The reviewed profile change could not be committed."
+      />,
+    );
+
+    const result = await axe.run(container, axeOptions);
+
+    expect(result.violations).toEqual([]);
+  });
+
   it("avatar upload panel has no automated axe violations", async () => {
     const { container } = render(
       <AvatarUploadPanel

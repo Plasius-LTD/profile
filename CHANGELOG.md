@@ -9,12 +9,15 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - Added backward-compatible controlled `SettingsPage` submission, host-owned form submission, pending/error feedback, and exported declarative field/action policy contracts for task #38.
+  - Added an Admin-safe avatar policy that can retain the preview and expose draft removal without exposing upload or replacement.
   - Added the prop-driven `TokenOverviewPanel`, exact BigInt TokenSubunit formatting, presentation contracts for balances, totals, status, activity, acquisition actions, and unavailable uses, plus accessible loading, error, empty, and refresh states for task #33.
   - Added package-owned `en-GB` Token overview translation keys and a label factory that lets hosts supply localized copy explicitly.
   - Added a runtime-validating adapter from released `@plasius/economy` contracts, stable activity filters, and public-entrypoint coverage.
   - Added an explicit portfolio presentation entry point for account-aware `WalletPortfolioSummaryV1`, `WalletPortfolioLifetimeV1`, and economic/workflow `WalletActivityEntryV1` contracts, preserving component roles, beneficiaries, ordering, and exact amounts for task #37.
 
 - **Changed**
+  - `SettingsPage` now provides an accessible named/busy form, 44 px minimum form controls and mutation targets, safe generic async-submit failures, and no longer writes profile PII to the console during legacy validation-only submission.
   - Exported a lazy-loadable `@plasius/profile/tokens` subpath plus explicit `@plasius/profile/tokens.css` stylesheet; both ESM and CommonJS JavaScript entrypoints are runtime-verified without executing CSS, while economy fetching, providers, storage, profile autosave, balance derivation, flags, and authorization remain outside `@plasius/profile`.
   - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
   - Updated the runtime contract dependency to approved `@plasius/economy` `^0.3.1` while retaining the V1 wallet-summary, lifetime-total, and activity presentation boundary.

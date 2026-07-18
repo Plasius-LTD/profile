@@ -1,5 +1,5 @@
 import React from "react";
-import type { UserAvatarEntity } from "@plasius/entity-manager";
+import type { UserAvatarEntity, UserEntity } from "@plasius/entity-manager";
 import {
   userEntitySchema,
   userAvatarSchema,
@@ -20,10 +20,32 @@ import {
 import styles from "./Settings.module.css";
 
 export interface SettingsPageProps {
+  /**
+   * Retains the legacy all-or-nothing avatar visibility switch.
+   *
+   * Prefer `fieldPolicies.avatar` for new integrations.
+   */
   hideAvatarField?: boolean;
+  /** Optional form id so a host-owned review action can submit this form. */
+  formId?: string;
+  /** Per-field presentation and editing policy. Omitted fields remain editable. */
+  fieldPolicies?: SettingsFieldPolicies;
+  /** Per-action presentation and availability policy. */
+  actionPolicies?: SettingsActionPolicies;
+  /**
+   * Receives a schema-valid profile snapshot after explicit form submission.
+   *
+   * When omitted, the legacy self-service submit behavior is retained.
+   */
+  onSubmit?: SettingsPageSubmitHandler;
+  /** Host-controlled pending state, composed with pending async `onSubmit` work. */
+  isSubmitting?: boolean;
+  /** Display-safe host error text for a failed manual submission. */
+  submitError?: string | null;
 }
 
-type SettingsFieldName =
+/** Profile fields whose presentation can be governed by a host policy. */
+export type SettingsFieldName =
   | "avatar"
   | "name.firstName"
   | "name.middleName"
@@ -32,6 +54,30 @@ type SettingsFieldName =
   | "name.preferredDisplayOrder"
   | "email"
   | "emailPreferences";
+
+/** Presentation modes for a settings field. */
+export type SettingsFieldPolicy = "editable" | "read-only" | "hidden";
+
+/** Partial field policy; omitted fields preserve the editable self-service default. */
+export type SettingsFieldPolicies = Partial<
+  Record<SettingsFieldName, SettingsFieldPolicy>
+>;
+
+/** Settings actions that a host may expose, disable, or hide. */
+export type SettingsActionName = "submit" | "avatarUpload" | "avatarRemove";
+
+/** Presentation modes for a settings action. */
+export type SettingsActionPolicy = "enabled" | "disabled" | "hidden";
+
+/** Partial action policy; omitted actions preserve their legacy defaults. */
+export type SettingsActionPolicies = Partial<
+  Record<SettingsActionName, SettingsActionPolicy>
+>;
+
+/** Manual submit callback invoked only with a schema-valid user snapshot. */
+export type SettingsPageSubmitHandler = (
+  user: UserEntity,
+) => void | Promise<void>;
 
 type SettingsFieldErrors = Partial<Record<SettingsFieldName, string>>;
 
@@ -45,6 +91,15 @@ const SETTINGS_FIELD_NAMES = new Set<SettingsFieldName>([
   "email",
   "emailPreferences",
 ]);
+
+const DEFAULT_ACTION_POLICIES: Record<
+  SettingsActionName,
+  SettingsActionPolicy
+> = {
+  submit: "enabled",
+  avatarUpload: "enabled",
+  avatarRemove: "hidden",
+};
 
 const FIELD_LABEL_TRANSLATION_KEYS = {
   "name.firstName": profileTranslationKeys.settings.firstName,
@@ -203,16 +258,147 @@ const getPreferredDisplayOrder = (translate: ProfileTranslationResolver) =>
     value,
   }));
 
-export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
+type SettingsFieldAccessibility = ReturnType<
+  typeof createAccessibleFieldBindings
+>;
+
+interface SettingsTextFieldProps {
+  accessibility: SettingsFieldAccessibility;
+  disabled: boolean;
+  error?: string;
+  label: string;
+  name: Exclude<
+    SettingsFieldName,
+    "avatar" | "name.preferredDisplayOrder" | "emailPreferences"
+  >;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  readOnly: boolean;
+  value: string;
+}
+
+function SettingsTextField({
+  accessibility,
+  disabled,
+  error,
+  label,
+  name,
+  onChange,
+  readOnly,
+  value,
+}: SettingsTextFieldProps) {
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>
+        {label}
+        <input
+          name={name}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled}
+          className={styles.input}
+          {...accessibility.inputProps}
+        />
+      </label>
+      {error ? (
+        <span className={styles.fieldError} {...accessibility.errorProps}>
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+interface SettingsSelectFieldProps {
+  accessibility: SettingsFieldAccessibility;
+  disabled: boolean;
+  error?: string;
+  label: string;
+  name: "name.preferredDisplayOrder" | "emailPreferences";
+  onChange: React.ChangeEventHandler<HTMLSelectElement>;
+  options: Array<{ label: string; value: string }>;
+  placeholder: string;
+  value: string;
+}
+
+function SettingsSelectField({
+  accessibility,
+  disabled,
+  error,
+  label,
+  name,
+  onChange,
+  options,
+  placeholder,
+  value,
+}: SettingsSelectFieldProps) {
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>
+        {label}
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className={styles.select}
+          {...accessibility.inputProps}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {error ? (
+        <span className={styles.fieldError} {...accessibility.errorProps}>
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+export function SettingsPage({
+  hideAvatarField = false,
+  formId,
+  fieldPolicies,
+  actionPolicies,
+  onSubmit,
+  isSubmitting = false,
+  submitError = null,
+}: SettingsPageProps) {
   const authorizedFetch = useAuthorizedFetch();
   const { t } = useI18n();
   const translate = React.useMemo(() => createProfileTranslationResolver(t), [t]);
   const { user } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const errorIdPrefix = React.useId();
+  const headingId = `${errorIdPrefix}-heading`;
+  const submitInFlightRef = React.useRef(false);
   const [avatarError, setAvatarError] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<SettingsFieldErrors>({});
   const [formErrors, setFormErrors] = React.useState<string[]>([]);
+  const [isInternallySubmitting, setIsInternallySubmitting] = React.useState(false);
+  const [internalSubmitError, setInternalSubmitError] = React.useState("");
+  const effectiveSubmitting = isSubmitting || isInternallySubmitting;
+  const displayedSubmitError = submitError?.trim() || internalSubmitError;
+  const getFieldPolicy = (field: SettingsFieldName): SettingsFieldPolicy =>
+    field === "avatar" && hideAvatarField
+      ? "hidden"
+      : (fieldPolicies?.[field] ?? "editable");
+  const getActionPolicy = (action: SettingsActionName): SettingsActionPolicy =>
+    actionPolicies?.[action] ?? DEFAULT_ACTION_POLICIES[action];
+  const isFieldVisible = (field: SettingsFieldName) =>
+    getFieldPolicy(field) !== "hidden";
+  const isFieldEditable = (field: SettingsFieldName) =>
+    getFieldPolicy(field) === "editable";
+  const avatarFieldPolicy = getFieldPolicy("avatar");
+  const avatarUploadPolicy = getActionPolicy("avatarUpload");
+  const avatarRemovePolicy = getActionPolicy("avatarRemove");
+  const submitPolicy = getActionPolicy("submit");
   const selectedEmailPreference = Array.isArray(user?.emailPreferences)
     ? (user.emailPreferences[0] ?? "")
     : "";
@@ -265,11 +451,20 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormErrors([]);
 
-    if (isSettingsFieldName(name) && name !== "avatar") {
-      clearFieldError(name);
+    if (
+      !isSettingsFieldName(name)
+      || name === "avatar"
+      || !isFieldEditable(name)
+      || effectiveSubmitting
+    ) {
+      return;
     }
+
+    setFormErrors([]);
+    setInternalSubmitError("");
+
+    clearFieldError(name);
 
     if (name === "emailPreferences") {
       dispatch({
@@ -316,12 +511,18 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     const file = e.target.files?.[0];
     e.target.value = "";
 
-    if (!file) {
+    if (
+      !file
+      || avatarFieldPolicy !== "editable"
+      || avatarUploadPolicy !== "enabled"
+      || effectiveSubmitting
+    ) {
       return;
     }
 
     setAvatarError("");
     setFormErrors([]);
+    setInternalSubmitError("");
 
     try {
       const uploadedAvatar = await uploadAvatar(file);
@@ -349,8 +550,39 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAvatarRemove = () => {
+    if (
+      avatarFieldPolicy === "hidden"
+      || avatarRemovePolicy !== "enabled"
+      || effectiveSubmitting
+      || !user?.avatar
+    ) {
+      return;
+    }
+
+    setAvatarError("");
+    setFormErrors([]);
+    setInternalSubmitError("");
+    dispatch({
+      type: "updateField",
+      payload: {
+        field: "avatar",
+        value: undefined,
+      },
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (
+      submitPolicy === "disabled"
+      || effectiveSubmitting
+      || submitInFlightRef.current
+    ) {
+      return;
+    }
+
     const validation = userEntitySchema.validate(user);
     if (!validation.valid || validation.errors?.length) {
       const nextErrors = mapValidationErrors(validation.errors, translate);
@@ -361,13 +593,44 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
 
     setFieldErrors({});
     setFormErrors([]);
-    console.info("Saved:", user);
+    setInternalSubmitError("");
+
+    if (!onSubmit) {
+      return;
+    }
+
+    submitInFlightRef.current = true;
+    setIsInternallySubmitting(true);
+
+    try {
+      await onSubmit(user as UserEntity);
+    } catch {
+      setInternalSubmitError(
+        translate(profileTranslationKeys.settings.submitFailed),
+      );
+    } finally {
+      submitInFlightRef.current = false;
+      setIsInternallySubmitting(false);
+    }
   };
 
   return (
     <div className={styles.settingsContainer}>
-      <form onSubmit={handleSubmit} className={styles.settingsForm}>
-        <h2>{translate(profileTranslationKeys.settings.heading)}</h2>
+      <form
+        id={formId}
+        onSubmit={handleSubmit}
+        className={styles.settingsForm}
+        aria-labelledby={headingId}
+        aria-busy={effectiveSubmitting}
+      >
+        <h2 id={headingId}>
+          {translate(profileTranslationKeys.settings.heading)}
+        </h2>
+        {displayedSubmitError ? (
+          <div className={styles.submitError} role="alert" aria-live="assertive">
+            {displayedSubmitError}
+          </div>
+        ) : null}
         {hasValidationSummary ? (
           <div className={styles.errorSummary} role="alert" aria-live="polite">
             <p className={styles.errorSummaryTitle}>
@@ -376,226 +639,194 @@ export function SettingsPage({ hideAvatarField = false }: SettingsPageProps) {
             {formErrors.length > 0 ? (
               <ul className={styles.errorList}>
                 {formErrors.map((error) => (
-                <li key={error}>{error}</li>
+                  <li key={error}>{error}</li>
                 ))}
               </ul>
             ) : null}
           </div>
         ) : null}
-        {!hideAvatarField ? (
+        {avatarFieldPolicy !== "hidden" ? (
           <>
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>
-                {translate(profileTranslationKeys.settings.uploadAvatar)}
-                <input
-                  type="file"
-                  name="avatar"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className={styles.input}
-                  {...avatarFieldAccessibility.inputProps}
-                />
-              </label>
-            </div>
+            {avatarFieldPolicy === "editable" && avatarUploadPolicy !== "hidden" ? (
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>
+                  {translate(profileTranslationKeys.settings.uploadAvatar)}
+                  <input
+                    type="file"
+                    name="avatar"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    disabled={
+                      effectiveSubmitting || avatarUploadPolicy === "disabled"
+                    }
+                    className={styles.input}
+                    {...avatarFieldAccessibility.inputProps}
+                  />
+                </label>
+              </div>
+            ) : null}
             {avatarError ? (
               <p className={styles.fieldError} {...avatarFieldAccessibility.errorProps}>
                 {avatarError}
               </p>
             ) : null}
 
-            {user?.avatar?.url && (
-              <div>
+            {user?.avatar?.url ? (
+              <div className={styles.avatarControls}>
                 <img
                   src={(user?.avatar as UserAvatarEntity)?.url as string}
                   alt={translate(profileTranslationKeys.settings.avatarPreview)}
                   className={styles.avatarPreview}
                 />
+                {avatarRemovePolicy !== "hidden" ? (
+                  <button
+                    type="button"
+                    className={styles.avatarAction}
+                    onClick={handleAvatarRemove}
+                    disabled={
+                      effectiveSubmitting || avatarRemovePolicy === "disabled"
+                    }
+                  >
+                    {translate(profileTranslationKeys.settings.removeAvatar)}
+                  </button>
+                ) : null}
               </div>
-            )}
+            ) : null}
           </>
         ) : null}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.firstName"])}
-            <input
-              name="name.firstName"
-              value={user?.name?.firstName ?? ""}
-              onChange={handleChange}
-              className={styles.input}
-              {...firstNameFieldAccessibility.inputProps}
-            />
-          </label>
-          {fieldErrors["name.firstName"] ? (
-            <span className={styles.fieldError} {...firstNameFieldAccessibility.errorProps}>
-              {fieldErrors["name.firstName"]}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.middleName"])}
-            <input
-              name="name.middleName"
-              value={user?.name?.middleName ?? ""}
-              onChange={handleChange}
-              className={styles.input}
-              {...getFieldAccessibility("name.middleName", {
-                error: fieldErrors["name.middleName"],
-              }).inputProps}
-            />
-          </label>
-          {fieldErrors["name.middleName"] ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("name.middleName", {
-                error: fieldErrors["name.middleName"],
-              }).errorProps}
-            >
-              {fieldErrors["name.middleName"]}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.lastName"])}
-            <input
-              name="name.lastName"
-              value={user?.name?.lastName ?? ""}
-              onChange={handleChange}
-              className={styles.input}
-              {...getFieldAccessibility("name.lastName", {
-                error: fieldErrors["name.lastName"],
-              }).inputProps}
-            />
-          </label>
-          {fieldErrors["name.lastName"] ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("name.lastName", {
-                error: fieldErrors["name.lastName"],
-              }).errorProps}
-            >
-              {fieldErrors["name.lastName"]}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.displayName"])}
-            <input
-              name="name.displayName"
-              value={user?.name?.displayName ?? ""}
-              onChange={handleChange}
-              className={styles.input}
-              {...getFieldAccessibility("name.displayName", {
-                error: fieldErrors["name.displayName"],
-              }).inputProps}
-            />
-          </label>
-          {fieldErrors["name.displayName"] ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("name.displayName", {
-                error: fieldErrors["name.displayName"],
-              }).errorProps}
-            >
-              {fieldErrors["name.displayName"]}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS["name.preferredDisplayOrder"])}
-            <select
-              name="name.preferredDisplayOrder"
-              value={user?.name?.preferredDisplayOrder ?? ""}
-              onChange={handleChange}
-              className={styles.select}
-              {...getFieldAccessibility("name.preferredDisplayOrder", {
+        {isFieldVisible("name.firstName") ? (
+          <SettingsTextField
+            accessibility={firstNameFieldAccessibility}
+            disabled={effectiveSubmitting}
+            error={fieldErrors["name.firstName"]}
+            label={translate(
+              FIELD_LABEL_TRANSLATION_KEYS["name.firstName"],
+            )}
+            name="name.firstName"
+            onChange={handleChange}
+            readOnly={!isFieldEditable("name.firstName")}
+            value={user?.name?.firstName ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("name.middleName") ? (
+          <SettingsTextField
+            accessibility={getFieldAccessibility("name.middleName", {
+              error: fieldErrors["name.middleName"],
+            })}
+            disabled={effectiveSubmitting}
+            error={fieldErrors["name.middleName"]}
+            label={translate(
+              FIELD_LABEL_TRANSLATION_KEYS["name.middleName"],
+            )}
+            name="name.middleName"
+            onChange={handleChange}
+            readOnly={!isFieldEditable("name.middleName")}
+            value={user?.name?.middleName ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("name.lastName") ? (
+          <SettingsTextField
+            accessibility={getFieldAccessibility("name.lastName", {
+              error: fieldErrors["name.lastName"],
+            })}
+            disabled={effectiveSubmitting}
+            error={fieldErrors["name.lastName"]}
+            label={translate(
+              FIELD_LABEL_TRANSLATION_KEYS["name.lastName"],
+            )}
+            name="name.lastName"
+            onChange={handleChange}
+            readOnly={!isFieldEditable("name.lastName")}
+            value={user?.name?.lastName ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("name.displayName") ? (
+          <SettingsTextField
+            accessibility={getFieldAccessibility("name.displayName", {
+              error: fieldErrors["name.displayName"],
+            })}
+            disabled={effectiveSubmitting}
+            error={fieldErrors["name.displayName"]}
+            label={translate(
+              FIELD_LABEL_TRANSLATION_KEYS["name.displayName"],
+            )}
+            name="name.displayName"
+            onChange={handleChange}
+            readOnly={!isFieldEditable("name.displayName")}
+            value={user?.name?.displayName ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("name.preferredDisplayOrder") ? (
+          <SettingsSelectField
+            accessibility={getFieldAccessibility(
+              "name.preferredDisplayOrder",
+              {
                 error: fieldErrors["name.preferredDisplayOrder"],
-              }).inputProps}
-            >
-              <option value="">
-                {translate(profileTranslationKeys.settings.selectPreference)}
-              </option>
-              {getPreferredDisplayOrder(translate).map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {fieldErrors["name.preferredDisplayOrder"] ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("name.preferredDisplayOrder", {
-                error: fieldErrors["name.preferredDisplayOrder"],
-              }).errorProps}
-            >
-              {fieldErrors["name.preferredDisplayOrder"]}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS.email)}
-            <input
-              name="email"
-              value={user?.email ?? ""}
-              onChange={handleChange}
-              className={styles.input}
-              {...getFieldAccessibility("email", {
-                error: fieldErrors.email,
-              }).inputProps}
-            />
-          </label>
-          {fieldErrors.email ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("email", {
-                error: fieldErrors.email,
-              }).errorProps}
-            >
-              {fieldErrors.email}
-            </span>
-          ) : null}
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            {translate(FIELD_LABEL_TRANSLATION_KEYS.emailPreferences)}
-            <select
-              name="emailPreferences"
-              value={selectedEmailPreference}
-              onChange={handleChange}
-              className={styles.select}
-              {...getFieldAccessibility("emailPreferences", {
-                error: fieldErrors.emailPreferences,
-              }).inputProps}
-            >
-              <option value="">
-                {translate(profileTranslationKeys.settings.selectPreference)}
-              </option>
-              {getEmailPreferenceOptions(translate).map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          {fieldErrors.emailPreferences ? (
-            <span
-              className={styles.fieldError}
-              {...getFieldAccessibility("emailPreferences", {
-                error: fieldErrors.emailPreferences,
-              }).errorProps}
-            >
-              {fieldErrors.emailPreferences}
-            </span>
-          ) : null}
-        </div>
-        <button type="submit" className={styles.submitButton}>
-          {translate(profileTranslationKeys.settings.saveSettings)}
-        </button>
+              },
+            )}
+            disabled={
+              effectiveSubmitting
+              || !isFieldEditable("name.preferredDisplayOrder")
+            }
+            error={fieldErrors["name.preferredDisplayOrder"]}
+            label={translate(
+              FIELD_LABEL_TRANSLATION_KEYS["name.preferredDisplayOrder"],
+            )}
+            name="name.preferredDisplayOrder"
+            onChange={handleChange}
+            options={getPreferredDisplayOrder(translate)}
+            placeholder={translate(
+              profileTranslationKeys.settings.selectPreference,
+            )}
+            value={user?.name?.preferredDisplayOrder ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("email") ? (
+          <SettingsTextField
+            accessibility={getFieldAccessibility("email", {
+              error: fieldErrors.email,
+            })}
+            disabled={effectiveSubmitting}
+            error={fieldErrors.email}
+            label={translate(FIELD_LABEL_TRANSLATION_KEYS.email)}
+            name="email"
+            onChange={handleChange}
+            readOnly={!isFieldEditable("email")}
+            value={user?.email ?? ""}
+          />
+        ) : null}
+        {isFieldVisible("emailPreferences") ? (
+          <SettingsSelectField
+            accessibility={getFieldAccessibility("emailPreferences", {
+              error: fieldErrors.emailPreferences,
+            })}
+            disabled={
+              effectiveSubmitting || !isFieldEditable("emailPreferences")
+            }
+            error={fieldErrors.emailPreferences}
+            label={translate(FIELD_LABEL_TRANSLATION_KEYS.emailPreferences)}
+            name="emailPreferences"
+            onChange={handleChange}
+            options={getEmailPreferenceOptions(translate)}
+            placeholder={translate(
+              profileTranslationKeys.settings.selectPreference,
+            )}
+            value={selectedEmailPreference}
+          />
+        ) : null}
+        {submitPolicy !== "hidden" ? (
+          <button
+            type="submit"
+            className={styles.submitButton}
+            disabled={effectiveSubmitting || submitPolicy === "disabled"}
+          >
+            {translate(
+              effectiveSubmitting
+                ? profileTranslationKeys.settings.savingSettings
+                : profileTranslationKeys.settings.saveSettings,
+            )}
+          </button>
+        ) : null}
       </form>
     </div>
   );
