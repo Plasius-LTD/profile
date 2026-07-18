@@ -21,6 +21,9 @@ export const profileTranslationKeys = {
     emailPreferences: "profile.settings.field.emailPreferences.label",
     selectPreference: "profile.settings.option.selectPreference",
     saveSettings: "profile.settings.action.save",
+    savingSettings: "profile.settings.action.saving",
+    removeAvatar: "profile.settings.avatar.action.remove",
+    submitFailed: "profile.settings.submit.error.default",
     avatarUploadFailed: "profile.settings.avatar.upload.error.default",
     avatarPayloadInvalid: "profile.settings.avatar.upload.error.invalidPayload",
     required: {
