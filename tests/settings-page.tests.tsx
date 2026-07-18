@@ -199,6 +199,61 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("blocks implicit submission when only an external review action may commit", () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <>
+        <SettingsPage
+          formId="reviewed-profile-form"
+          actionPolicies={{ submit: "hidden" }}
+          onSubmit={onSubmit}
+        />
+        <button type="submit" form="reviewed-profile-form">
+          Commit reviewed profile
+        </button>
+      </>,
+    );
+
+    fireEvent.submit(
+      screen.getByRole("form", { name: "Profile settings" }),
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Commit reviewed profile" }),
+    );
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps controlled edits in a local draft until the host submits them", async () => {
+    const onSubmit = vi.fn();
+
+    render(<SettingsPage onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: {
+        name: "name.displayName",
+        value: "Reviewed display name",
+      },
+    });
+
+    expect(dispatchMock).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: expect.objectContaining({
+            displayName: "Reviewed display name",
+          }),
+        }),
+      );
+    });
+  });
+
   it("exposes asynchronous manual-submit progress and a safe failure state", async () => {
     let rejectSubmit: ((reason: Error) => void) | undefined;
     const onSubmit = vi.fn(
@@ -334,6 +389,51 @@ describe("SettingsPage", () => {
       payload: { field: "avatar", value: undefined },
     });
     expect(authorizedFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps controlled avatar removal in the reviewed draft", async () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <SettingsPage
+        fieldPolicies={{ avatar: "read-only" }}
+        actionPolicies={{
+          avatarUpload: "hidden",
+          avatarRemove: "enabled",
+        }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove avatar" }));
+
+    expect(dispatchMock).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ avatar: undefined }),
+      );
+    });
+  });
+
+  it("surfaces validation failures for fields hidden by host policy", () => {
+    const onSubmit = vi.fn();
+    storeState.user = createValidUser({ email: "" });
+
+    render(
+      <SettingsPage
+        fieldPolicies={{ email: "hidden" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("Email:");
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("can hide avatar upload independently while retaining an editable avatar field", () => {

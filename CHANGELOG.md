@@ -21,7 +21,8 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
 
 - **Fixed**
-  - (placeholder)
+  - Controlled settings edits and avatar changes now remain in a local review draft instead of dispatching to `UserStore` and triggering provider autosave before host commit.
+  - Hidden submit policies now block implicit form submission while retaining explicit host-owned review-sheet commits, and validation failures for hidden fields remain visible in the form error summary.
 
 - **Security**
   - (placeholder)

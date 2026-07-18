@@ -373,8 +373,18 @@ export function SettingsPage({
   const authorizedFetch = useAuthorizedFetch();
   const { t } = useI18n();
   const translate = React.useMemo(() => createProfileTranslationResolver(t), [t]);
-  const { user } = UserStore.useStore();
+  const { user: storedUser } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
+  const controlled = typeof onSubmit === "function";
+  const [controlledUser, setControlledUser] = React.useState<
+    UserEntity | undefined
+  >(() => controlled ? storedUser : undefined);
+  React.useEffect(() => {
+    if (controlled) {
+      setControlledUser(storedUser);
+    }
+  }, [controlled, storedUser]);
+  const user = controlled ? controlledUser : storedUser;
   const errorIdPrefix = React.useId();
   const headingId = `${errorIdPrefix}-heading`;
   const submitInFlightRef = React.useRef(false);
@@ -467,21 +477,50 @@ export function SettingsPage({
     clearFieldError(name);
 
     if (name === "emailPreferences") {
-      dispatch({
-        type: "updateField",
-        payload: {
-          field: "emailPreferences",
-          value: value ? [value] : [],
-        },
-      });
+      const nextPreferences = value ? [value] : [];
+      if (controlled) {
+        setControlledUser((current) =>
+          current
+            ? { ...current, emailPreferences: nextPreferences }
+            : current
+        );
+      } else {
+        dispatch({
+          type: "updateField",
+          payload: {
+            field: "emailPreferences",
+            value: nextPreferences,
+          },
+        });
+      }
       return;
     }
 
     if (name.startsWith("name.")) {
       const [, field] = name.split(".");
-      dispatch({ type: "updateNameField", payload: { field, value } });
+      if (controlled) {
+        setControlledUser((current) =>
+          current
+            ? {
+                ...current,
+                name: {
+                  ...current.name,
+                  [field]: value,
+                },
+              }
+            : current
+        );
+      } else {
+        dispatch({ type: "updateNameField", payload: { field, value } });
+      }
     } else {
-      dispatch({ type: "updateField", payload: { field: name, value } });
+      if (controlled) {
+        setControlledUser((current) =>
+          current ? { ...current, email: value } : current
+        );
+      } else {
+        dispatch({ type: "updateField", payload: { field: name, value } });
+      }
     }
   };
 
@@ -534,13 +573,21 @@ export function SettingsPage({
         );
       }
 
-      dispatch({
-        type: "updateField",
-        payload: {
-          field: "avatar",
-          value: validatedAvatar.value as unknown as UserAvatarEntity,
-        },
-      });
+      const nextAvatar =
+        validatedAvatar.value as unknown as UserAvatarEntity;
+      if (controlled) {
+        setControlledUser((current) =>
+          current ? { ...current, avatar: nextAvatar } : current
+        );
+      } else {
+        dispatch({
+          type: "updateField",
+          payload: {
+            field: "avatar",
+            value: nextAvatar,
+          },
+        });
+      }
     } catch (err) {
       setAvatarError(
         err instanceof Error && err.message
@@ -563,20 +610,31 @@ export function SettingsPage({
     setAvatarError("");
     setFormErrors([]);
     setInternalSubmitError("");
-    dispatch({
-      type: "updateField",
-      payload: {
-        field: "avatar",
-        value: undefined,
-      },
-    });
+    if (controlled) {
+      setControlledUser((current) =>
+        current ? { ...current, avatar: undefined } : current
+      );
+    } else {
+      dispatch({
+        type: "updateField",
+        payload: {
+          field: "avatar",
+          value: undefined,
+        },
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const submitter = (e.nativeEvent as SubmitEvent).submitter;
+    const externalSubmitter =
+      submitter instanceof HTMLElement &&
+      !e.currentTarget.contains(submitter);
 
     if (
       submitPolicy === "disabled"
+      || (submitPolicy === "hidden" && !externalSubmitter)
       || effectiveSubmitting
       || submitInFlightRef.current
     ) {
@@ -586,6 +644,21 @@ export function SettingsPage({
     const validation = userEntitySchema.validate(user);
     if (!validation.valid || validation.errors?.length) {
       const nextErrors = mapValidationErrors(validation.errors, translate);
+      for (const [fieldName, message] of Object.entries(
+        nextErrors.fieldErrors,
+      )) {
+        const field = fieldName as SettingsFieldName;
+        if (message && !isFieldVisible(field)) {
+          const labelKey =
+            field === "avatar"
+              ? profileTranslationKeys.settings.uploadAvatar
+              : FIELD_LABEL_TRANSLATION_KEYS[field];
+          nextErrors.formErrors.push(
+            `${translate(labelKey)}: ${message}`,
+          );
+          delete nextErrors.fieldErrors[field];
+        }
+      }
       setFieldErrors(nextErrors.fieldErrors);
       setFormErrors(nextErrors.formErrors);
       return;
