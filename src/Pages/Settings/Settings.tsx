@@ -81,6 +81,21 @@ export type SettingsPageSubmitHandler = (
 
 type SettingsFieldErrors = Partial<Record<SettingsFieldName, string>>;
 
+const IMPLICIT_SUBMISSION_INPUT_TYPES = new Set([
+  "date",
+  "datetime-local",
+  "email",
+  "month",
+  "number",
+  "password",
+  "search",
+  "tel",
+  "text",
+  "time",
+  "url",
+  "week",
+]);
+
 const SETTINGS_FIELD_NAMES = new Set<SettingsFieldName>([
   "avatar",
   "name.firstName",
@@ -693,8 +708,8 @@ export function SettingsPage({
     if (
       submitPolicy !== "hidden"
       || event.key !== "Enter"
-      || event.target instanceof HTMLTextAreaElement
-      || event.target instanceof HTMLButtonElement
+      || !(event.target instanceof HTMLInputElement)
+      || !IMPLICIT_SUBMISSION_INPUT_TYPES.has(event.target.type)
     ) {
       return;
     }

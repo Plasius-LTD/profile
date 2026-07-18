@@ -227,6 +227,12 @@ describe("SettingsPage", () => {
     ).toBe(false);
     expect(onSubmit).not.toHaveBeenCalled();
 
+    expect(
+      fireEvent.keyDown(screen.getByLabelText("Preferred name display"), {
+        key: "Enter",
+      }),
+    ).toBe(true);
+
     fireEvent.click(
       screen.getByRole("button", { name: "Commit reviewed profile" }),
     );
