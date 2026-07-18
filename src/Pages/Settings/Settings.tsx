@@ -687,10 +687,26 @@ export function SettingsPage({
     }
   };
 
+  const blockHiddenImplicitSubmit = (
+    event: React.KeyboardEvent<HTMLFormElement>,
+  ) => {
+    if (
+      submitPolicy !== "hidden"
+      || event.key !== "Enter"
+      || event.target instanceof HTMLTextAreaElement
+      || event.target instanceof HTMLButtonElement
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+  };
+
   return (
     <div className={styles.settingsContainer}>
       <form
         id={formId}
+        onKeyDown={blockHiddenImplicitSubmit}
         onSubmit={handleSubmit}
         className={styles.settingsForm}
         aria-labelledby={headingId}
