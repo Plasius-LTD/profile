@@ -708,6 +708,7 @@ export function SettingsPage({
     if (
       submitPolicy !== "hidden"
       || event.key !== "Enter"
+      || event.nativeEvent.isComposing
       || !(event.target instanceof HTMLInputElement)
       || !IMPLICIT_SUBMISSION_INPUT_TYPES.has(event.target.type)
     ) {

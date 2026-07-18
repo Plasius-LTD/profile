@@ -233,6 +233,14 @@ describe("SettingsPage", () => {
       }),
     ).toBe(true);
 
+    expect(
+      fireEvent.keyDown(screen.getByLabelText("Display name"), {
+        key: "Enter",
+        isComposing: true,
+      }),
+    ).toBe(true);
+    expect(onSubmit).not.toHaveBeenCalled();
+
     fireEvent.click(
       screen.getByRole("button", { name: "Commit reviewed profile" }),
     );
