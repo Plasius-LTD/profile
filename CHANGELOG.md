@@ -27,7 +27,8 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Security**
-  - (placeholder)
+  - Restored same-repository pull-request validation on the self-hosted CI
+    runner while explicitly denying fork pull requests access to that runner.
 
 ## [1.0.40] - 2026-07-13
 
