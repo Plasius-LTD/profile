@@ -71,6 +71,55 @@ const settingsClient: SettingsDataClient = {
 
 If `client` is omitted, the package keeps its legacy HTTP behavior via `@plasius/auth/useAuthorizedFetch`.
 
+### Controlled settings and host policies
+
+`SettingsPage` keeps its self-service defaults when rendered without new props.
+Hosts that need an explicit review/commit flow can supply `onSubmit`, controlled
+busy/error state, and declarative field/action policies. The callback runs only
+after the current profile snapshot passes the package schema.
+
+```tsx
+<SettingsPage
+  formId="admin-profile-review"
+  fieldPolicies={{
+    avatar: "read-only",
+    email: "read-only",
+    emailPreferences: "hidden",
+  }}
+  actionPolicies={{
+    avatarUpload: "hidden",
+    avatarRemove: "enabled",
+    submit: "hidden",
+  }}
+  isSubmitting={commitProfile.isPending}
+  submitError={commitProfile.displaySafeError}
+  onSubmit={(profile) => commitProfile.mutateAsync(profile)}
+/>
+
+<button type="submit" form="admin-profile-review">
+  Commit reviewed profile
+</button>
+```
+
+Field policies are `editable`, `read-only`, or `hidden`. Action policies are
+`enabled`, `disabled`, or `hidden`. Omitted fields remain editable; avatar upload
+and the built-in submit action remain enabled, while avatar removal remains
+hidden to preserve the existing self-service surface. `hideAvatarField` is
+retained for compatibility and takes precedence over `fieldPolicies.avatar`.
+
+An enabled avatar-removal action updates the in-memory profile draft by clearing
+`avatar`; it never calls an endpoint directly. This lets a host show the
+before/after change in its own review surface before `onSubmit` persists it.
+An async `onSubmit` disables the package controls while pending. Rejections use
+package-owned generic copy so internal errors are not disclosed; a host can
+supply display-safe `submitError` text for controlled failures.
+
+These policies govern presentation only. A host must still evaluate its stored
+feature flag and authoritative capabilities, constrain the submitted DTO, and
+enforce authorization again at the mutation boundary. The Admin integration
+inherits `admin.workspace.touch-first.enabled`; disabling that flag should
+remove the host-owned Admin editor without changing self-service defaults.
+
 ### Translation bundles
 
 Package-owned UI copy is exposed as `profileTranslations` and stable

@@ -96,7 +96,7 @@ describe("SettingsPage", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders profile fields, dispatches edits, and logs a valid save", () => {
+  it("renders profile fields, dispatches edits, and validates the legacy self-service submit", () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -104,6 +104,7 @@ describe("SettingsPage", () => {
 
     expect(screen.getByRole("heading", { name: "Profile settings" })).toBeTruthy();
     expect(screen.getByRole("img", { name: "Avatar preview" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove avatar" })).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Display name"), {
       target: { name: "name.displayName", value: "Alicia" },
@@ -149,7 +150,7 @@ describe("SettingsPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
-    expect(infoSpy).toHaveBeenCalledWith("Saved:", storeState.user);
+    expect(infoSpy).not.toHaveBeenCalled();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -169,6 +170,239 @@ describe("SettingsPage", () => {
     expect(screen.queryByLabelText("Upload avatar")).toBeNull();
     expect(screen.queryByRole("img", { name: "Avatar preview" })).toBeNull();
     expect(screen.getByLabelText("Display name")).toBeTruthy();
+  });
+
+  it("supports an externally triggered manual submit without rendering its own submit action", async () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <>
+        <SettingsPage
+          formId="admin-profile-form"
+          actionPolicies={{ submit: "hidden" }}
+          onSubmit={onSubmit}
+        />
+        <button type="submit" form="admin-profile-form">
+          Commit reviewed profile
+        </button>
+      </>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Commit reviewed profile" }),
+    );
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(storeState.user);
+    });
+  });
+
+  it("exposes asynchronous manual-submit progress and a safe failure state", async () => {
+    let rejectSubmit: ((reason: Error) => void) | undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectSubmit = reject;
+        }),
+    );
+
+    render(<SettingsPage onSubmit={onSubmit} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    await waitFor(() => {
+      expect(
+        (screen.getByRole("button", {
+          name: "Saving settings",
+        }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+    });
+    expect(
+      screen.getByRole("form", { name: "Profile settings" }).getAttribute("aria-busy"),
+    ).toBe("true");
+
+    rejectSubmit?.(new Error("private upstream failure details"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toContain(
+        "Profile settings could not be saved. Try again.",
+      );
+    });
+    expect(screen.queryByText("private upstream failure details")).toBeNull();
+    expect(
+      (screen.getByRole("button", {
+        name: "Save settings",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+  });
+
+  it("prevents concurrent manual submissions while an async commit is pending", async () => {
+    let resolveSubmit: (() => void) | undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSubmit = resolve;
+        }),
+    );
+
+    render(<SettingsPage onSubmit={onSubmit} />);
+
+    const submitButton = screen.getByRole("button", { name: "Save settings" });
+    fireEvent.click(submitButton);
+    fireEvent.click(submitButton);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    resolveSubmit?.();
+
+    await waitFor(() => {
+      expect(
+        (screen.getByRole("button", {
+          name: "Save settings",
+        }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
+  });
+
+  it("renders host-controlled busy and error state accessibly", () => {
+    render(
+      <SettingsPage
+        isSubmitting
+        submitError="The reviewed change could not be committed."
+      />,
+    );
+
+    expect(
+      (screen.getByRole("button", {
+        name: "Saving settings",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(screen.getByRole("alert").textContent).toContain(
+      "The reviewed change could not be committed.",
+    );
+    expect(
+      screen.getByRole("form", { name: "Profile settings" }).getAttribute("aria-busy"),
+    ).toBe("true");
+  });
+
+  it("applies declarative editable, read-only, and hidden field policies", () => {
+    render(
+      <SettingsPage
+        fieldPolicies={{
+          "name.firstName": "hidden",
+          email: "read-only",
+          emailPreferences: "read-only",
+        }}
+      />,
+    );
+
+    expect(screen.queryByLabelText("First name")).toBeNull();
+    expect((screen.getByLabelText("Email") as HTMLInputElement).readOnly).toBe(true);
+    expect(
+      (screen.getByLabelText("Email preferences") as HTMLSelectElement).disabled,
+    ).toBe(true);
+    expect((screen.getByLabelText("Display name") as HTMLInputElement).readOnly).toBe(
+      false,
+    );
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { name: "email", value: "ignored@example.com" },
+    });
+    expect(dispatchMock).not.toHaveBeenCalled();
+  });
+
+  it("can show and remove an avatar without exposing upload or replacement", () => {
+    render(
+      <SettingsPage
+        fieldPolicies={{ avatar: "read-only" }}
+        actionPolicies={{
+          avatarUpload: "hidden",
+          avatarRemove: "enabled",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Avatar preview" })).toBeTruthy();
+    expect(screen.queryByLabelText("Upload avatar")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove avatar" }));
+
+    expect(dispatchMock).toHaveBeenCalledWith({
+      type: "updateField",
+      payload: { field: "avatar", value: undefined },
+    });
+    expect(authorizedFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("can hide avatar upload independently while retaining an editable avatar field", () => {
+    render(
+      <SettingsPage
+        actionPolicies={{
+          avatarUpload: "hidden",
+          avatarRemove: "enabled",
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Avatar preview" })).toBeTruthy();
+    expect(screen.queryByLabelText("Upload avatar")).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove avatar" })).toBeTruthy();
+  });
+
+  it("lets the legacy avatar visibility switch override new avatar policies", () => {
+    render(
+      <SettingsPage
+        hideAvatarField
+        fieldPolicies={{ avatar: "editable" }}
+        actionPolicies={{
+          avatarUpload: "enabled",
+          avatarRemove: "enabled",
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("img", { name: "Avatar preview" })).toBeNull();
+    expect(screen.queryByLabelText("Upload avatar")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove avatar" })).toBeNull();
+  });
+
+  it("honours disabled mutation actions without hiding their availability", () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <>
+        <SettingsPage
+          formId="disabled-admin-profile-form"
+          fieldPolicies={{ avatar: "read-only" }}
+          actionPolicies={{
+            avatarRemove: "disabled",
+            submit: "disabled",
+          }}
+          onSubmit={onSubmit}
+        />
+        <button type="submit" form="disabled-admin-profile-form">
+          External commit
+        </button>
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove avatar" }));
+    fireEvent.click(screen.getByRole("button", { name: "External commit" }));
+
+    expect(
+      (screen.getByRole("button", {
+        name: "Remove avatar",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByRole("button", {
+        name: "Save settings",
+      }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(dispatchMock).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("falls back to an empty email-preference selection when the preference list is empty", () => {
@@ -458,7 +692,7 @@ describe("SettingsPage", () => {
     expect(firstNameInput.getAttribute("aria-errormessage")).toMatch(
       /-name-firstname-error$/,
     );
-    expect(infoSpy).not.toHaveBeenCalledWith("Saved:", expect.anything());
+    expect(infoSpy).not.toHaveBeenCalled();
     validateSpy.mockRestore();
   });
 

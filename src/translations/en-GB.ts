@@ -16,6 +16,10 @@ export const profileEnGbTranslations = {
   "profile.settings.field.emailPreferences.label": "Email preferences",
   "profile.settings.option.selectPreference": "Select preference",
   "profile.settings.action.save": "Save settings",
+  "profile.settings.action.saving": "Saving settings",
+  "profile.settings.avatar.action.remove": "Remove avatar",
+  "profile.settings.submit.error.default":
+    "Profile settings could not be saved. Try again.",
   "profile.settings.avatar.upload.error.default":
     "Avatar upload failed. Try a different image and retry.",
   "profile.settings.avatar.upload.error.invalidPayload":
