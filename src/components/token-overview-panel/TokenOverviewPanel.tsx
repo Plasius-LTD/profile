@@ -3,6 +3,7 @@ import type {
   ActivityStatus,
   ActivityType,
   TokenSource,
+  WalletPortfolioComponentRole,
 } from "@plasius/economy";
 import {
   getProfileDefaultTranslation,
@@ -77,6 +78,20 @@ export interface TokenLifetimeTotalsPresentation {
   reversedSubunits: CanonicalTokenSubunitString;
 }
 
+/**
+ * One explicitly separated, host-labelled wallet component from an
+ * authoritative portfolio read.
+ */
+export interface TokenWalletComponentPresentation {
+  walletId: string;
+  role: WalletPortfolioComponentRole;
+  label: string;
+  balances: TokenBalancePresentation;
+  lifetimeTotals: TokenLifetimeTotalsPresentation;
+  beneficiaryAccountId?: string;
+  beneficiaryLabel?: string;
+}
+
 /** A single, localized activity row supplied by the host application. */
 export interface TokenActivityPresentation {
   id: string;
@@ -93,7 +108,32 @@ export interface TokenActivityPresentation {
   beneficiaryAccountId?: string;
   beneficiaryLabel?: string;
   maskedReference?: string;
+  entryKind?: "economic" | "workflow";
+  walletId?: string;
+  transactionId?: string;
+  commandId?: string;
 }
+
+/** Portfolio activity variants preserve the economy workflow discriminant. */
+export interface EconomicTokenPortfolioActivityPresentation
+  extends TokenActivityPresentation {
+  entryKind: "economic";
+  walletId: string;
+  transactionId: string;
+  commandId?: never;
+}
+
+export interface WorkflowTokenPortfolioActivityPresentation
+  extends TokenActivityPresentation {
+  entryKind: "workflow";
+  walletId: string;
+  commandId: string;
+  transactionId?: never;
+}
+
+export type TokenPortfolioActivityPresentation =
+  | EconomicTokenPortfolioActivityPresentation
+  | WorkflowTokenPortfolioActivityPresentation;
 
 /** A localized wallet/cohort status such as provisional early-backer status. */
 export interface TokenOverviewStatusPresentation {
@@ -197,6 +237,7 @@ export interface TokenOverviewPanelReadyProps extends TokenOverviewPanelBaseProp
   balances: TokenBalancePresentation;
   lifetimeTotals: TokenLifetimeTotalsPresentation;
   activities: readonly TokenActivityPresentation[];
+  walletComponents?: readonly TokenWalletComponentPresentation[];
   statuses?: readonly TokenOverviewStatusPresentation[];
   actions?: readonly TokenOverviewActionPresentation[];
   unavailableUses?: readonly TokenUnavailableUsePresentation[];
@@ -490,6 +531,7 @@ export function TokenOverviewPanel(props: TokenOverviewPanelProps) {
     balances,
     lifetimeTotals,
     activities,
+    walletComponents = [],
     statuses = [],
     actions = [],
     unavailableUses = [],
@@ -551,6 +593,50 @@ export function TokenOverviewPanel(props: TokenOverviewPanelProps) {
             formatAmount={formatAmount}
           />
         </dl>
+        {walletComponents.length > 0 ? (
+          <ul className={styles.cardList}>
+            {walletComponents.map((component, index) => {
+              const componentHeadingId =
+                `${panelHeadingId}-wallet-component-${index}`;
+
+              return (
+                <li key={component.walletId} className={styles.statusCard}>
+                  <ActivityHeading
+                    id={componentHeadingId}
+                    className={styles.activityHeading}
+                  >
+                    {component.label}
+                  </ActivityHeading>
+                  {component.beneficiaryLabel ? (
+                    <p>{component.beneficiaryLabel}</p>
+                  ) : null}
+                  <dl className={styles.amountGrid}>
+                    <AmountDefinition
+                      label={labels.availableBalance}
+                      amountSubunits={component.balances.availableSubunits}
+                      formatAmount={formatAmount}
+                    />
+                    <AmountDefinition
+                      label={labels.reservedBalance}
+                      amountSubunits={component.balances.reservedSubunits}
+                      formatAmount={formatAmount}
+                    />
+                    <AmountDefinition
+                      label={labels.heldBalance}
+                      amountSubunits={component.balances.heldSubunits}
+                      formatAmount={formatAmount}
+                    />
+                    <AmountDefinition
+                      label={labels.rewardProgress}
+                      amountSubunits={component.balances.rewardProgressSubunits}
+                      formatAmount={formatAmount}
+                    />
+                  </dl>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
       </section>
 
       <section className={styles.section}>

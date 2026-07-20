@@ -14,18 +14,22 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Added the prop-driven `TokenOverviewPanel`, exact BigInt TokenSubunit formatting, presentation contracts for balances, totals, status, activity, acquisition actions, and unavailable uses, plus accessible loading, error, empty, and refresh states for task #33.
   - Added package-owned `en-GB` Token overview translation keys and a label factory that lets hosts supply localized copy explicitly.
   - Added a runtime-validating adapter from released `@plasius/economy` contracts, stable activity filters, and public-entrypoint coverage.
+  - Added an explicit portfolio presentation entry point for account-aware `WalletPortfolioSummaryV1`, `WalletPortfolioLifetimeV1`, and economic/workflow `WalletActivityEntryV1` contracts, preserving component roles, beneficiaries, ordering, and exact amounts for task #37.
 
 - **Changed**
   - `SettingsPage` now provides an accessible named/busy form, 44 px minimum form controls and mutation targets, safe generic async-submit failures, and no longer writes profile PII to the console during legacy validation-only submission.
   - Exported a lazy-loadable `@plasius/profile/tokens` subpath plus explicit `@plasius/profile/tokens.css` stylesheet; both ESM and CommonJS JavaScript entrypoints are runtime-verified without executing CSS, while economy fetching, providers, storage, profile autosave, balance derivation, flags, and authorization remain outside `@plasius/profile`.
   - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
+  - Updated the runtime contract dependency to approved `@plasius/economy` `^0.3.1` while retaining the V1 wallet-summary, lifetime-total, and activity presentation boundary.
+  - Token overview consumers may now render portfolio wallet components as separate, labelled balance groups without changing the existing single-wallet props or adapter.
 
 - **Fixed**
   - Controlled settings edits and avatar changes now remain in a local review draft instead of dispatching to `UserStore` and triggering provider autosave before host commit.
   - Hidden submit policies now block implicit form submission while retaining explicit host-owned review-sheet commits, and validation failures for hidden fields remain visible in the form error summary.
 
 - **Security**
-  - (placeholder)
+  - Restored same-repository pull-request validation on the self-hosted CI
+    runner while explicitly denying fork pull requests access to that runner.
 
 ## [1.0.40] - 2026-07-13
 

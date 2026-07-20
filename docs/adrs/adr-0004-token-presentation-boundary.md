@@ -41,11 +41,16 @@ Expose `TokenOverviewPanel` and related presentation types from
   visible Credit/Debit words, explicit loading/error/empty states, and a polite
   refresh live region.
 
-Also expose a pure `createTokenEconomyPresentation` adapter against the released
-`@plasius/economy` contracts. The adapter invokes economy runtime assertions,
-maps signed activity amounts to an explicit direction and non-negative
-magnitude, and retains stable activity-type, status, `TokenSource`, beneficiary,
-and masked-reference keys for filtering.
+Also expose pure adapters against the released `@plasius/economy` contracts.
+`createTokenEconomyPresentation` retains the single-wallet boundary.
+`createTokenPortfolioEconomyPresentation` accepts explicit portfolio summary,
+portfolio lifetime, and discriminated wallet-activity contracts. It invokes
+economy runtime assertions, aligns components by wallet identity while
+preserving the authoritative summary order, rejects cross-portfolio role,
+beneficiary, subject, or activity-wallet mismatches, and retains economic versus
+workflow identity. Both adapters map signed activity amounts to an explicit
+direction and non-negative magnitude and retain stable activity-type, status,
+`TokenSource`, beneficiary, and masked-reference keys for filtering.
 Localization and account labels remain host-supplied. The adapter does not
 fetch, persist, authorize, derive a balance, or execute a command.
 
@@ -68,6 +73,9 @@ so a host deliberately chooses the localized copy used for each render.
 - Contract drift and malformed authoritative DTOs fail at the economy adapter
   boundary instead of being silently rendered, while stable keys prevent
   localized labels from becoming filter identifiers.
+- Household, personal, gameplay-allocation, and hold components remain visibly
+  separate; portfolio totals come only from the validated authoritative
+  projections, and pending/failed workflow activity cannot alter them.
 - Exact formatting remains safe above JavaScript's integer precision limit.
 - Host routes must validate API contracts, evaluate the rollout flag and wallet
   capability, localize domain-specific activity text, mask references, and

@@ -1,20 +1,29 @@
 import {
   assertActivityEntry,
+  assertWalletActivityEntry,
   assertWalletBalanceSummary,
   assertWalletLifetimeTotals,
+  assertWalletPortfolioLifetime,
+  assertWalletPortfolioSummary,
   parseIsoTimestamp,
   parseTokenSubunits,
   type ActivityEntryV1,
   type ActivityStatus,
   type ActivityType,
   type TokenSource,
+  type WalletActivityEntryV1,
   type WalletBalanceSummaryV1,
   type WalletLifetimeTotalsV1,
+  type WalletPortfolioComponentRole,
+  type WalletPortfolioLifetimeV1,
+  type WalletPortfolioSummaryV1,
 } from "@plasius/economy";
 import type {
   TokenActivityPresentation,
   TokenBalancePresentation,
   TokenLifetimeTotalsPresentation,
+  TokenPortfolioActivityPresentation,
+  TokenWalletComponentPresentation,
 } from "./TokenOverviewPanel.js";
 
 /** Host localization and account-label resolvers for stable economy keys. */
@@ -36,6 +45,30 @@ export interface TokenEconomyPresentation {
   balances: TokenBalancePresentation;
   lifetimeTotals: TokenLifetimeTotalsPresentation;
   activities: readonly TokenActivityPresentation[];
+}
+
+/** Additional localization needed to label distinct portfolio components. */
+export interface TokenPortfolioEconomyPresentationResolvers
+  extends TokenEconomyPresentationResolvers {
+  componentLabel: (
+    role: WalletPortfolioComponentRole,
+    beneficiaryAccountId?: string,
+  ) => string;
+}
+
+/** Explicit account-aware portfolio input; the legacy single-wallet input remains supported. */
+export interface TokenPortfolioEconomyPresentationInput {
+  portfolioSummary: WalletPortfolioSummaryV1;
+  portfolioLifetime: WalletPortfolioLifetimeV1;
+  activities: readonly WalletActivityEntryV1[];
+  resolvers: TokenPortfolioEconomyPresentationResolvers;
+}
+
+/** Portfolio presentation retains component boundaries and their authoritative ordering. */
+export interface TokenPortfolioEconomyPresentation
+  extends TokenEconomyPresentation {
+  activities: readonly TokenPortfolioActivityPresentation[];
+  walletComponents: readonly TokenWalletComponentPresentation[];
 }
 
 export interface TokenActivityPresentationFilter {
@@ -87,6 +120,15 @@ function requireResolver(
 ): void {
   if (typeof value[field] !== "function") {
     throw new TypeError(`resolvers.${field} must be a function`);
+  }
+}
+
+function requireDenseRecordArray(value: unknown, label: string): void {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${label} must be an array`);
+  }
+  for (let index = 0; index < value.length; index += 1) {
+    requireRecord(value[index], `${label}[${index}]`);
   }
 }
 
@@ -156,6 +198,45 @@ function assertRuntimePresentationInput(
 
   const resolvers = requireRecord(input.resolvers, "resolvers");
   for (const field of ["activityTitle", "activityStatus", "occurredAt"] as const) {
+    requireResolver(resolvers, field);
+  }
+  if (resolvers.beneficiary !== undefined) {
+    requireResolver(resolvers, "beneficiary");
+  }
+}
+
+function assertRuntimePortfolioPresentationInput(
+  value: unknown,
+): asserts value is TokenPortfolioEconomyPresentationInput {
+  const input = requireRecord(
+    value,
+    "Token portfolio economy presentation input",
+  );
+  const portfolioSummary = requireRecord(
+    input.portfolioSummary,
+    "portfolioSummary",
+  );
+  const portfolioLifetime = requireRecord(
+    input.portfolioLifetime,
+    "portfolioLifetime",
+  );
+  requireDenseRecordArray(
+    portfolioSummary.components,
+    "portfolioSummary.components",
+  );
+  requireDenseRecordArray(
+    portfolioLifetime.components,
+    "portfolioLifetime.components",
+  );
+  requireDenseRecordArray(input.activities, "activities");
+
+  const resolvers = requireRecord(input.resolvers, "resolvers");
+  for (const field of [
+    "activityTitle",
+    "activityStatus",
+    "occurredAt",
+    "componentLabel",
+  ] as const) {
     requireResolver(resolvers, field);
   }
   if (resolvers.beneficiary !== undefined) {
@@ -244,6 +325,209 @@ export const createTokenEconomyPresentation: CreateTokenEconomyPresentation = (
       spentSubunits: input.lifetimeTotals.spent,
       reversedSubunits: input.lifetimeTotals.reversed,
     },
+    activities,
+  };
+};
+
+function mapBalancePresentation(
+  balances: WalletBalanceSummaryV1,
+): TokenBalancePresentation {
+  return {
+    availableSubunits: balances.available,
+    reservedSubunits: balances.reserved,
+    heldSubunits: balances.held,
+    rewardProgressSubunits: balances.rewardProgress,
+  };
+}
+
+function mapLifetimePresentation(
+  lifetimeTotals: WalletLifetimeTotalsV1,
+): TokenLifetimeTotalsPresentation {
+  return {
+    boughtSubunits: lifetimeTotals.bought,
+    earnedSubunits: lifetimeTotals.earned,
+    allocatedSubunits: lifetimeTotals.allocated,
+    reclaimedSubunits: lifetimeTotals.reclaimed,
+    spentSubunits: lifetimeTotals.spent,
+    reversedSubunits: lifetimeTotals.reversed,
+  };
+}
+
+function resolveBeneficiaryLabel(
+  accountId: string | undefined,
+  resolvers: TokenEconomyPresentationResolvers,
+): string | undefined {
+  if (accountId === undefined) {
+    return undefined;
+  }
+  const label = resolvers.beneficiary?.(accountId);
+  if (label !== undefined && typeof label !== "string") {
+    throw new TypeError("beneficiary resolver must return a string or undefined");
+  }
+  return label;
+}
+
+/**
+ * Maps an account-aware portfolio without flattening wallet identity, role, or
+ * beneficiary boundaries. Totals are copied only from validated authoritative
+ * projections; activity never contributes to them.
+ */
+export interface CreateTokenPortfolioEconomyPresentation {
+  (
+    input: TokenPortfolioEconomyPresentationInput,
+  ): TokenPortfolioEconomyPresentation;
+  (input: unknown): TokenPortfolioEconomyPresentation;
+}
+
+export const createTokenPortfolioEconomyPresentation:
+  CreateTokenPortfolioEconomyPresentation = (
+  input: unknown,
+): TokenPortfolioEconomyPresentation => {
+  assertRuntimePortfolioPresentationInput(input);
+  assertWalletPortfolioSummary(input.portfolioSummary);
+  assertWalletPortfolioLifetime(input.portfolioLifetime);
+
+  if (
+    input.portfolioSummary.portfolioId !==
+      input.portfolioLifetime.portfolioId ||
+    input.portfolioSummary.subjectAccountId !==
+      input.portfolioLifetime.subjectAccountId
+  ) {
+    throw new TypeError(
+      "Portfolio summary and lifetime must identify the same portfolio and subject",
+    );
+  }
+
+  const lifetimeComponents = new Map(
+    input.portfolioLifetime.components.map((component) => [
+      component.walletId,
+      component,
+    ]),
+  );
+  if (
+    input.portfolioSummary.components.length !== lifetimeComponents.size
+  ) {
+    throw new TypeError(
+      "Portfolio summary and lifetime must contain the same wallet components",
+    );
+  }
+
+  const walletComponents = input.portfolioSummary.components.map(
+    (component): TokenWalletComponentPresentation => {
+      const lifetimeComponent = lifetimeComponents.get(component.walletId);
+      if (
+        lifetimeComponent === undefined ||
+        lifetimeComponent.role !== component.role ||
+        lifetimeComponent.beneficiaryAccountId !==
+          component.beneficiaryAccountId
+      ) {
+        throw new TypeError(
+          "Portfolio summary and lifetime component boundaries must match",
+        );
+      }
+      const beneficiaryLabel = resolveBeneficiaryLabel(
+        component.beneficiaryAccountId,
+        input.resolvers,
+      );
+
+      return {
+        walletId: component.walletId,
+        role: component.role,
+        label: requireResolverText(
+          input.resolvers.componentLabel(
+            component.role,
+            component.beneficiaryAccountId,
+          ),
+          "componentLabel",
+        ),
+        balances: mapBalancePresentation(component.summary),
+        lifetimeTotals: mapLifetimePresentation(
+          lifetimeComponent.snapshot.totals,
+        ),
+        ...(component.beneficiaryAccountId === undefined
+          ? {}
+          : { beneficiaryAccountId: component.beneficiaryAccountId }),
+        ...(beneficiaryLabel === undefined ? {} : { beneficiaryLabel }),
+      };
+    },
+  );
+
+  const authorizedWalletIds = new Set(
+    walletComponents.map((component) => component.walletId),
+  );
+  const activities = input.activities.map(
+    (entry): TokenPortfolioActivityPresentation => {
+      assertWalletActivityEntry(entry);
+      if (!authorizedWalletIds.has(entry.walletId)) {
+        throw new TypeError(
+          "Portfolio activity contains a wallet outside the presented portfolio",
+        );
+      }
+      const signedAmount = parseTokenSubunits(entry.amount);
+      const beneficiaryLabel = resolveBeneficiaryLabel(
+        entry.beneficiaryAccountId,
+        input.resolvers,
+      );
+
+      const presentation: Omit<
+        TokenActivityPresentation,
+        "entryKind" | "transactionId" | "commandId"
+      > & { walletId: string } = {
+        id: entry.activityId,
+        walletId: entry.walletId,
+        activityType: entry.activityType,
+        status: entry.status,
+        title: requireResolverText(
+          input.resolvers.activityTitle(entry.activityType),
+          "activityTitle",
+        ),
+        direction: signedAmount < 0n ? "debit" : "credit",
+        amountSubunits: (
+          signedAmount < 0n ? -signedAmount : signedAmount
+        ).toString(10),
+        sourceKey: entry.source,
+        sourceLabel: entry.sourceLabel,
+        statusLabel: requireResolverText(
+          input.resolvers.activityStatus(entry.status),
+          "activityStatus",
+        ),
+        occurredAt: entry.occurredAt,
+        occurredAtLabel: requireResolverText(
+          input.resolvers.occurredAt(entry.occurredAt),
+          "occurredAt",
+        ),
+        ...(entry.beneficiaryAccountId === undefined
+          ? {}
+          : { beneficiaryAccountId: entry.beneficiaryAccountId }),
+        ...(beneficiaryLabel === undefined ? {} : { beneficiaryLabel }),
+        ...(entry.maskedReference === undefined
+          ? {}
+          : { maskedReference: entry.maskedReference }),
+      };
+
+      return entry.entryKind === "economic"
+        ? {
+            ...presentation,
+            entryKind: "economic",
+            transactionId: entry.transactionId,
+          }
+        : {
+            ...presentation,
+            entryKind: "workflow",
+            commandId: entry.commandId,
+          };
+    },
+  );
+
+  return {
+    balances: {
+      availableSubunits: input.portfolioSummary.totals.available,
+      reservedSubunits: input.portfolioSummary.totals.reserved,
+      heldSubunits: input.portfolioSummary.totals.held,
+      rewardProgressSubunits: input.portfolioSummary.totals.rewardProgress,
+    },
+    lifetimeTotals: mapLifetimePresentation(input.portfolioLifetime.totals),
+    walletComponents,
     activities,
   };
 };

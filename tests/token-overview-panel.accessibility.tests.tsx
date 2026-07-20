@@ -34,6 +34,48 @@ const readyProps: TokenOverviewPanelReadyProps = {
     spentSubunits: "0",
     reversedSubunits: "0",
   },
+  walletComponents: [
+    {
+      walletId: "wallet:household",
+      role: "household-treasury",
+      label: "Household treasury",
+      balances: {
+        availableSubunits: "1000",
+        reservedSubunits: "1000",
+        heldSubunits: "0",
+        rewardProgressSubunits: "0",
+      },
+      lifetimeTotals: {
+        boughtSubunits: "50000",
+        earnedSubunits: "0",
+        allocatedSubunits: "1000",
+        reclaimedSubunits: "0",
+        spentSubunits: "0",
+        reversedSubunits: "0",
+      },
+    },
+    {
+      walletId: "wallet:personal",
+      role: "personal",
+      label: "Personal rewards",
+      beneficiaryAccountId: "account:adult",
+      beneficiaryLabel: "Your personal wallet",
+      balances: {
+        availableSubunits: "500",
+        reservedSubunits: "0",
+        heldSubunits: "0",
+        rewardProgressSubunits: "75",
+      },
+      lifetimeTotals: {
+        boughtSubunits: "0",
+        earnedSubunits: "75",
+        allocatedSubunits: "0",
+        reclaimedSubunits: "0",
+        spentSubunits: "0",
+        reversedSubunits: "0",
+      },
+    },
+  ],
   statuses: [
     {
       id: "early-backer",

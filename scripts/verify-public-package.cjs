@@ -159,6 +159,7 @@ function verifyTokenRuntimeEntrypoints() {
   const requiredExports = [
     "TokenOverviewPanel",
     "createTokenEconomyPresentation",
+    "createTokenPortfolioEconomyPresentation",
     "createProfileTranslationResolver",
   ];
   const assertion = `
