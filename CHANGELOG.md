@@ -24,6 +24,9 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Token overview consumers may now render portfolio wallet components as separate, labelled balance groups without changing the existing single-wallet props or adapter.
 
 - **Fixed**
+  - Route release preparation through the same configurable trusted self-hosted
+    runner policy as package publication while retaining fork-deny workflow
+    guards for task #37.
   - Controlled settings edits and avatar changes now remain in a local review draft instead of dispatching to `UserStore` and triggering provider autosave before host commit.
   - Hidden submit policies now block implicit form submission while retaining explicit host-owned review-sheet commits, and validation failures for hidden fields remain visible in the form error summary.
 
