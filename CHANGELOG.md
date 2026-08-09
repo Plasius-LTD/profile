@@ -31,6 +31,10 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Hidden submit policies now block implicit form submission while retaining explicit host-owned review-sheet commits, and validation failures for hidden fields remain visible in the form error summary.
 
 - **Security**
+  - Replaced the long-lived npm write-token path with production-environment
+    OIDC trusted publishing, exact-main successful-CI admission, immutable
+    tarball/SBOM hand-off, registry integrity verification, and provenance for
+    task #36.
   - Added fail-closed source and npm-package admission for the administrative contributor registry and pinned the CI/CD runtime to Node.js 24.18.0 LTS.
   - Restored same-repository pull-request validation on the self-hosted CI
     runner while explicitly denying fork pull requests access to that runner.

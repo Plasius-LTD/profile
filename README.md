@@ -336,6 +336,10 @@ MIT
 CI keeps the administrative contributor registry outside Git and npm package
 artifacts using exact, case-normalised path checks. CI runs on approved
 self-hosted runners. Release preparation and npm publication use GitHub-hosted
-runners with Node.js 24.18.0 LTS. CD remains disabled until the npm trusted
-publisher binding is verified and the legacy token fallback is removed.
+runners with Node.js 24.18.0 LTS. Release preparation lands metadata through a
+protected-branch pull request; a second workflow run publishes only from that
+exact main commit after successful exact-SHA CI. npm receives the sealed local
+tarball through its `production`-bound OIDC trusted publisher, with provenance
+and registry integrity verification and no long-lived write token. Rollback is
+to disable `cd.yml`; it never restores the retired token or contributor path.
 <!-- END PLASIUS RELEASE INTEGRITY -->
