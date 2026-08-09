@@ -19,6 +19,11 @@ main SHA. Publication is dispatched from that SHA, builds an immutable package
 tarball and SBOM in a read-only job, then hands their IDs and digests to a
 dependency-free `production` job.
 
+Pull-request CI uses GitHub-hosted runners after a same-repository trusted-head
+admission. Only protected `main` CI may use the workflow-restricted self-hosted
+pool, so validating a repository-owned PR does not require temporarily widening
+the organisation runner boundary.
+
 The publication job uses npm's GitHub Actions trusted publisher bound to
 `Plasius-LTD/profile`, `cd.yml`, and environment `production`. It publishes the
 explicit local tarball with provenance, verifies npm registry integrity and the
