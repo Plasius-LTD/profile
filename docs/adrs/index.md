@@ -6,3 +6,4 @@
 - [ADR-0004: Keep Token Wallet Components Presentation-Only](./adr-0004-token-presentation-boundary.md)
 - [ADR-0005: Keep Settings Policies Presentational and Submission Host-Owned](./adr-0005-controlled-settings-boundary.md)
 - [ADR-0006: Exact-main OIDC trusted package publishing](./adr-0006-oidc-trusted-package-publishing.md)
+- [ADR-0007: Profile normalization preserves contract metadata](./adr-0007-preserve-profile-contract-metadata.md)

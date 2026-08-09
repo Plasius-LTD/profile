@@ -24,6 +24,8 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Token overview consumers may now render portfolio wallet components as separate, labelled balance groups without changing the existing single-wallet props or adapter.
 
 - **Fixed**
+  - Preserved the optional complete/incomplete user-name status through profile
+    response normalization and `UserStore` state for task #43.
   - Route release preparation through the same configurable trusted self-hosted
     runner policy as package publication while retaining fork-deny workflow
     guards for task #37.

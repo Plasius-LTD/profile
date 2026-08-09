@@ -41,6 +41,10 @@ import {
 ```
 
 `UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
+It also preserves the optional server-owned `UserName.status` contract through
+response normalization. Hosts can use `incomplete` to prompt for profile
+completion without inferring state from an email-derived or provider fallback
+display name; legacy profiles that omit the status remain valid.
 
 Both providers also support transport injection so host applications can keep site-specific data access outside the shared package:
 
