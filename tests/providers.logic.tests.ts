@@ -1,6 +1,7 @@
 import {
   PreferredDisplayOrder,
   UserEmailPreferences,
+  UserNameStatus,
   UserNotificationPreferences,
   type UserEntity,
 } from "@plasius/entity-manager";
@@ -97,6 +98,19 @@ describe("UserProvider logic", () => {
     expect(validated.id).toBe(VALID_USER_ID);
     expect(validated.version).toBe("7.0.0");
     expect(validated.name.displayName).toBe("Alice Smith");
+  });
+
+  it("preserves explicit incomplete-name status while accepting legacy omission", () => {
+    const legacy = ValidateUser(createValidUser());
+    const incomplete = ValidateUser(createValidUser({
+      name: {
+        ...createValidUser().name,
+        status: UserNameStatus.INCOMPLETE,
+      },
+    }));
+
+    expect("status" in legacy.name).toBe(false);
+    expect(incomplete.name.status).toBe(UserNameStatus.INCOMPLETE);
   });
 
   it("strips draft-only fields that are not part of the user schema", () => {

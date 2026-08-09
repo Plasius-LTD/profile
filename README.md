@@ -41,6 +41,10 @@ import {
 ```
 
 `UserProvider` loads and persists the active profile by the user entity `id`. Applications should treat `partitionKey` as storage metadata, not as the profile route identifier.
+It also preserves the optional server-owned `UserName.status` contract through
+response normalization. Hosts can use `incomplete` to prompt for profile
+completion without inferring state from an email-derived or provider fallback
+display name; legacy profiles that omit the status remain valid.
 
 Both providers also support transport injection so host applications can keep site-specific data access outside the shared package:
 
@@ -334,12 +338,14 @@ MIT
 ## Release integrity
 
 CI keeps the administrative contributor registry outside Git and npm package
-artifacts using exact, case-normalised path checks. CI runs on approved
-self-hosted runners. Release preparation and npm publication use GitHub-hosted
-runners with Node.js 24.18.0 LTS. Release preparation lands metadata through a
-protected-branch pull request; a second workflow run publishes only from that
-exact main commit after successful exact-SHA CI. npm receives the sealed local
-tarball through its `production`-bound OIDC trusted publisher, with provenance
-and registry integrity verification and no long-lived write token. Rollback is
-to disable `cd.yml`; it never restores the retired token or contributor path.
+artifacts using exact, case-normalised path checks. Same-repository pull
+requests run on GitHub-hosted runners after an explicit trusted-head admission;
+protected `main` CI continues on approved self-hosted runners. Release
+preparation and npm publication use GitHub-hosted runners with Node.js 24.18.0
+LTS. Release preparation lands metadata through a protected-branch pull
+request; a second workflow run publishes only from that exact main commit after
+successful exact-SHA CI. npm receives the sealed local tarball through its
+`production`-bound OIDC trusted publisher, with provenance and registry
+integrity verification and no long-lived write token. Rollback is to disable
+`cd.yml`; it never restores the retired token or contributor path.
 <!-- END PLASIUS RELEASE INTEGRITY -->

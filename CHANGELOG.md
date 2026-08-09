@@ -24,6 +24,12 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Token overview consumers may now render portfolio wallet components as separate, labelled balance groups without changing the existing single-wallet props or adapter.
 
 - **Fixed**
+  - Isolated same-repository pull-request validation onto GitHub-hosted runners
+    while retaining workflow-restricted self-hosted execution for protected
+    `main`, preventing trusted PR CI from stalling behind the organisation
+    runner-group workflow allow-list (`#36`).
+  - Preserved the optional complete/incomplete user-name status through profile
+    response normalization and `UserStore` state for task #43.
   - Route release preparation through the same configurable trusted self-hosted
     runner policy as package publication while retaining fork-deny workflow
     guards for task #37.
@@ -36,8 +42,9 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
     tarball/SBOM hand-off, registry integrity verification, and provenance for
     task #36.
   - Added fail-closed source and npm-package admission for the administrative contributor registry and pinned the CI/CD runtime to Node.js 24.18.0 LTS.
-  - Restored same-repository pull-request validation on the self-hosted CI
-    runner while explicitly denying fork pull requests access to that runner.
+  - Restored same-repository pull-request validation on GitHub-hosted CI after
+    explicit trusted-head admission while keeping fork pull requests and
+    unprotected refs away from the self-hosted runner pool.
 
 ## [1.0.40] - 2026-07-13
 

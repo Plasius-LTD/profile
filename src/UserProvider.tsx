@@ -113,6 +113,7 @@ function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
   const displayName =
     normalizeOptionalText(unwrapped.name?.displayName)
     ?? (fallbackDisplayName.length > 0 ? fallbackDisplayName : DEFAULT_DISPLAY_NAME);
+  const nameStatus = unwrapped.name?.status;
 
   return {
     ...unwrapped,
@@ -125,6 +126,7 @@ function normalizeUserEntityCandidate(user: UserEntity): UserEntity {
       displayName,
       preferredDisplayOrder:
         unwrapped.name?.preferredDisplayOrder ?? PreferredDisplayOrder.DISPLAY_NAME,
+      ...(nameStatus !== undefined ? { status: nameStatus } : {}),
     },
   } as UserEntity;
 }

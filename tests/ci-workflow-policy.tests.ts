@@ -12,6 +12,8 @@ const npmConfig = readFileSync(new URL("../.npmrc", import.meta.url), "utf8");
 const configurableSelfHostedRunner =
   "runs-on: ${{ fromJSON(vars.CD_RUNNER_LABELS || '[\"self-hosted\",\"Linux\",\"X64\"]') }}";
 const hostedProductionRunner = "runs-on: ubuntu-latest";
+const isolatedCiRunner =
+  "runs-on: ${{ fromJSON(github.event_name == 'pull_request' && '[\"ubuntu-latest\"]' || '[\"self-hosted\",\"Linux\",\"X64\"]') }}";
 const exactCiWorkflowEndpoint =
   'actions/workflows/ci.yml/runs"';
 
@@ -33,7 +35,11 @@ describe("workflow trust boundaries", () => {
         /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/gu,
       ),
     ).toHaveLength(2);
-    expect(ciWorkflow.match(/runs-on: \[self-hosted, Linux, X64\]/gu)).toHaveLength(2);
+    expect(ciWorkflow).toContain("name: Trusted head admission");
+    expect(ciWorkflow).toContain("runs-on: ubuntu-latest");
+    expect(ciWorkflow.match(/needs: trusted_head/gu)).toHaveLength(2);
+    expect(ciWorkflow.split(isolatedCiRunner)).toHaveLength(3);
+    expect(ciWorkflow).not.toContain("runs-on: [self-hosted, Linux, X64]");
   });
 
   it("keeps production release workflows off pull-request triggers", () => {
