@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.41] - 2026-08-09
+
+- **Added**
   - Added backward-compatible controlled `SettingsPage` submission, host-owned form submission, pending/error feedback, and exported declarative field/action policy contracts for task #38.
   - Added an Admin-safe avatar policy that can retain the preview and expose draft removal without exposing upload or replacement.
   - Added the prop-driven `TokenOverviewPanel`, exact BigInt TokenSubunit formatting, presentation contracts for balances, totals, status, activity, acquisition actions, and unavailable uses, plus accessible loading, error, empty, and refresh states for task #33.
@@ -491,7 +505,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.40...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.41...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -535,3 +549,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.38]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.38
 [1.0.39]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.39
 [1.0.40]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.40
+[1.0.41]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.41
