@@ -1,4 +1,9 @@
-import type { ProfileTranslationKey } from "../i18n.js";
+import type {
+  ProfilePackageTranslationKey,
+  ProfileSettingsExtensionTranslationKey,
+  ProfileTokenTranslationKey,
+  ProfileTranslationKey,
+} from "../i18n.js";
 
 export const profileEnGbTranslations = {
   "profile.settings.heading": "Profile settings",
@@ -16,10 +21,6 @@ export const profileEnGbTranslations = {
   "profile.settings.field.emailPreferences.label": "Email preferences",
   "profile.settings.option.selectPreference": "Select preference",
   "profile.settings.action.save": "Save settings",
-  "profile.settings.action.saving": "Saving settings",
-  "profile.settings.avatar.action.remove": "Remove avatar",
-  "profile.settings.submit.error.default":
-    "Profile settings could not be saved. Try again.",
   "profile.settings.avatar.upload.error.default":
     "Avatar upload failed. Try a different image and retry.",
   "profile.settings.avatar.upload.error.invalidPayload":
@@ -85,6 +86,38 @@ export const profileEnGbTranslations = {
     "Attempts: {attempts} | Trace ID: {requestId}",
   "profile.routeStatus.error.trace.unavailable": "unavailable",
   "profile.routeStatus.error.action.retry": "Retry loading profile",
+  "profile.save.error.validationFailed": "Profile validation failed.",
+  "profile.save.error.validationSummary":
+    "Fix the highlighted fields before saving.",
+  "profile.save.error.saveFailed": "Profile save failed.",
+  "profile.provider.defaultDisplayName": "Plasius User",
+  "profile.provider.error.unknownValidationError": "unknown error",
+  "profile.provider.error.invalidUserAvatar": "Invalid User Avatar: {details}",
+  "profile.provider.error.invalidUserProfile":
+    "Invalid User Profile: {details}",
+  "profile.provider.error.failedToLoadUser":
+    "Failed to load user ({status})",
+  "profile.provider.error.failedToCreateUser":
+    "Failed to create user ({status})",
+  "profile.provider.error.failedToSaveUser":
+    "Save failed with status {status}",
+  "profile.provider.error.invalidUserIdForSave": "Invalid user id for save.",
+  "profile.provider.error.settingsLoadFailed":
+    "Load failed with status {status}",
+  "profile.provider.error.settingsSaveFailed":
+    "Save failed with status {status}",
+  "profile.accessibility.destructiveHint":
+    "This action is destructive. Confirm the target and consequences before continuing.",
+} as const satisfies Record<ProfileTranslationKey, string>;
+
+export const profileSettingsExtensionEnGbTranslations = {
+  "profile.settings.action.saving": "Saving settings",
+  "profile.settings.avatar.action.remove": "Remove avatar",
+  "profile.settings.submit.error.default":
+    "Profile settings could not be saved. Try again.",
+} as const satisfies Record<ProfileSettingsExtensionTranslationKey, string>;
+
+export const profileTokenEnGbTranslations = {
   "profile.tokenOverview.heading": "Tokens",
   "profile.tokenOverview.unit.token.singular": "Token",
   "profile.tokenOverview.unit.token.plural": "Tokens",
@@ -98,6 +131,12 @@ export const profileEnGbTranslations = {
   "profile.tokenOverview.empty.title": "No Token wallet to show",
   "profile.tokenOverview.empty.description":
     "Token information will appear here when a wallet is available.",
+  "profile.tokenOverview.preview.title": "No Token wallet has been created",
+  "profile.tokenOverview.preview.description":
+    "This is a preview only. Tokens cannot yet be earned, bought, allocated, spent, or recorded.",
+  "profile.tokenOverview.preview.amount": "Preview amount",
+  "profile.tokenOverview.preview.activity.empty":
+    "No Token activity can be recorded in this preview.",
   "profile.tokenOverview.balances.heading": "Current balances",
   "profile.tokenOverview.balances.available": "Available",
   "profile.tokenOverview.balances.reserved": "Reserved",
@@ -125,26 +164,10 @@ export const profileEnGbTranslations = {
   "profile.tokenOverview.activity.reference": "Reference",
   "profile.tokenOverview.unavailableUses.heading": "Ways to use Tokens",
   "profile.tokenOverview.unavailableUses.status": "Unavailable",
-  "profile.save.error.validationFailed": "Profile validation failed.",
-  "profile.save.error.validationSummary":
-    "Fix the highlighted fields before saving.",
-  "profile.save.error.saveFailed": "Profile save failed.",
-  "profile.provider.defaultDisplayName": "Plasius User",
-  "profile.provider.error.unknownValidationError": "unknown error",
-  "profile.provider.error.invalidUserAvatar": "Invalid User Avatar: {details}",
-  "profile.provider.error.invalidUserProfile":
-    "Invalid User Profile: {details}",
-  "profile.provider.error.failedToLoadUser":
-    "Failed to load user ({status})",
-  "profile.provider.error.failedToCreateUser":
-    "Failed to create user ({status})",
-  "profile.provider.error.failedToSaveUser":
-    "Save failed with status {status}",
-  "profile.provider.error.invalidUserIdForSave": "Invalid user id for save.",
-  "profile.provider.error.settingsLoadFailed":
-    "Load failed with status {status}",
-  "profile.provider.error.settingsSaveFailed":
-    "Save failed with status {status}",
-  "profile.accessibility.destructiveHint":
-    "This action is destructive. Confirm the target and consequences before continuing.",
-} as const satisfies Record<ProfileTranslationKey, string>;
+} as const satisfies Record<ProfileTokenTranslationKey, string>;
+
+export const profilePackageEnGbTranslations = {
+  ...profileEnGbTranslations,
+  ...profileSettingsExtensionEnGbTranslations,
+  ...profileTokenEnGbTranslations,
+} as const satisfies Record<ProfilePackageTranslationKey, string>;

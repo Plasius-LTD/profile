@@ -11,7 +11,8 @@ import { useI18n } from "@plasius/translations";
 import { UserStore } from "../../UserProvider.js";
 import { createAccessibleFieldBindings } from "../../accessibility.js";
 import {
-  createProfileTranslationResolver,
+  createProfilePackageTranslationResolver,
+  profileSettingsExtensionTranslationKeys,
   profileTranslationKeys,
   type ProfileTranslationKey,
   type ProfileTranslationResolver,
@@ -387,7 +388,10 @@ export function SettingsPage({
 }: SettingsPageProps) {
   const authorizedFetch = useAuthorizedFetch();
   const { t } = useI18n();
-  const translate = React.useMemo(() => createProfileTranslationResolver(t), [t]);
+  const translate = React.useMemo(
+    () => createProfilePackageTranslationResolver(t),
+    [t],
+  );
   const { user: storedUser } = UserStore.useStore();
   const dispatch = UserStore.useDispatch();
   const controlled = typeof onSubmit === "function";
@@ -694,7 +698,7 @@ export function SettingsPage({
       await onSubmit(user as UserEntity);
     } catch {
       setInternalSubmitError(
-        translate(profileTranslationKeys.settings.submitFailed),
+        translate(profileSettingsExtensionTranslationKeys.submitFailed),
       );
     } finally {
       submitInFlightRef.current = false;
@@ -792,7 +796,7 @@ export function SettingsPage({
                       effectiveSubmitting || avatarRemovePolicy === "disabled"
                     }
                   >
-                    {translate(profileTranslationKeys.settings.removeAvatar)}
+                    {translate(profileSettingsExtensionTranslationKeys.removeAvatar)}
                   </button>
                 ) : null}
               </div>
@@ -927,7 +931,7 @@ export function SettingsPage({
           >
             {translate(
               effectiveSubmitting
-                ? profileTranslationKeys.settings.savingSettings
+                ? profileSettingsExtensionTranslationKeys.savingSettings
                 : profileTranslationKeys.settings.saveSettings,
             )}
           </button>

@@ -3,7 +3,12 @@ import type {
   TranslationDictionary,
   TranslationValue,
 } from "@plasius/translations";
-import { profileEnGbTranslations } from "./translations/en-GB.js";
+import {
+  profileEnGbTranslations,
+  profilePackageEnGbTranslations,
+  profileSettingsExtensionEnGbTranslations,
+  profileTokenEnGbTranslations,
+} from "./translations/en-GB.js";
 
 export const profileTranslationKeys = {
   settings: {
@@ -21,9 +26,6 @@ export const profileTranslationKeys = {
     emailPreferences: "profile.settings.field.emailPreferences.label",
     selectPreference: "profile.settings.option.selectPreference",
     saveSettings: "profile.settings.action.save",
-    savingSettings: "profile.settings.action.saving",
-    removeAvatar: "profile.settings.avatar.action.remove",
-    submitFailed: "profile.settings.submit.error.default",
     avatarUploadFailed: "profile.settings.avatar.upload.error.default",
     avatarPayloadInvalid: "profile.settings.avatar.upload.error.invalidPayload",
     required: {
@@ -89,45 +91,6 @@ export const profileTranslationKeys = {
     errorTraceUnavailable: "profile.routeStatus.error.trace.unavailable",
     retryAction: "profile.routeStatus.error.action.retry",
   },
-  tokenOverview: {
-    heading: "profile.tokenOverview.heading",
-    tokenUnitSingular: "profile.tokenOverview.unit.token.singular",
-    tokenUnitPlural: "profile.tokenOverview.unit.token.plural",
-    loadingTitle: "profile.tokenOverview.loading.title",
-    loadingDescription: "profile.tokenOverview.loading.description",
-    errorTitle: "profile.tokenOverview.error.title",
-    errorDescription: "profile.tokenOverview.error.description",
-    retryAction: "profile.tokenOverview.error.action.retry",
-    emptyTitle: "profile.tokenOverview.empty.title",
-    emptyDescription: "profile.tokenOverview.empty.description",
-    balancesHeading: "profile.tokenOverview.balances.heading",
-    availableBalance: "profile.tokenOverview.balances.available",
-    reservedBalance: "profile.tokenOverview.balances.reserved",
-    heldBalance: "profile.tokenOverview.balances.held",
-    rewardProgress: "profile.tokenOverview.balances.rewardProgress",
-    refreshBalances: "profile.tokenOverview.balances.action.refresh",
-    refreshingBalances: "profile.tokenOverview.balances.status.refreshing",
-    lifetimeHeading: "profile.tokenOverview.lifetime.heading",
-    lifetimeBought: "profile.tokenOverview.lifetime.bought",
-    lifetimeEarned: "profile.tokenOverview.lifetime.earned",
-    lifetimeAllocated: "profile.tokenOverview.lifetime.allocated",
-    lifetimeReclaimed: "profile.tokenOverview.lifetime.reclaimed",
-    lifetimeSpent: "profile.tokenOverview.lifetime.spent",
-    lifetimeReversed: "profile.tokenOverview.lifetime.reversed",
-    statusesHeading: "profile.tokenOverview.statuses.heading",
-    actionsHeading: "profile.tokenOverview.actions.heading",
-    activityHeading: "profile.tokenOverview.activity.heading",
-    activityEmpty: "profile.tokenOverview.activity.empty",
-    activityCredit: "profile.tokenOverview.activity.direction.credit",
-    activityDebit: "profile.tokenOverview.activity.direction.debit",
-    activitySource: "profile.tokenOverview.activity.source",
-    activityStatus: "profile.tokenOverview.activity.status",
-    activityDate: "profile.tokenOverview.activity.date",
-    activityBeneficiary: "profile.tokenOverview.activity.beneficiary",
-    activityReference: "profile.tokenOverview.activity.reference",
-    unavailableUsesHeading: "profile.tokenOverview.unavailableUses.heading",
-    unavailableStatus: "profile.tokenOverview.unavailableUses.status",
-  },
   save: {
     validationFailed: "profile.save.error.validationFailed",
     validationSummary: "profile.save.error.validationSummary",
@@ -156,10 +119,86 @@ type LeafValues<T> = T extends string
     ? LeafValues<T[keyof T]>
     : never;
 
+/**
+ * The stable v1 translation-key surface. Keep this object and its derived union
+ * closed so additive package features cannot invalidate downstream exhaustive
+ * dictionaries or switches.
+ */
 export type ProfileTranslationKey = LeafValues<typeof profileTranslationKeys>;
+
+export const profileSettingsExtensionTranslationKeys = {
+  savingSettings: "profile.settings.action.saving",
+  removeAvatar: "profile.settings.avatar.action.remove",
+  submitFailed: "profile.settings.submit.error.default",
+} as const;
+
+export const profileTokenTranslationKeys = {
+  heading: "profile.tokenOverview.heading",
+  tokenUnitSingular: "profile.tokenOverview.unit.token.singular",
+  tokenUnitPlural: "profile.tokenOverview.unit.token.plural",
+  loadingTitle: "profile.tokenOverview.loading.title",
+  loadingDescription: "profile.tokenOverview.loading.description",
+  errorTitle: "profile.tokenOverview.error.title",
+  errorDescription: "profile.tokenOverview.error.description",
+  retryAction: "profile.tokenOverview.error.action.retry",
+  emptyTitle: "profile.tokenOverview.empty.title",
+  emptyDescription: "profile.tokenOverview.empty.description",
+  previewTitle: "profile.tokenOverview.preview.title",
+  previewDescription: "profile.tokenOverview.preview.description",
+  previewAmount: "profile.tokenOverview.preview.amount",
+  previewActivityEmpty: "profile.tokenOverview.preview.activity.empty",
+  balancesHeading: "profile.tokenOverview.balances.heading",
+  availableBalance: "profile.tokenOverview.balances.available",
+  reservedBalance: "profile.tokenOverview.balances.reserved",
+  heldBalance: "profile.tokenOverview.balances.held",
+  rewardProgress: "profile.tokenOverview.balances.rewardProgress",
+  refreshBalances: "profile.tokenOverview.balances.action.refresh",
+  refreshingBalances: "profile.tokenOverview.balances.status.refreshing",
+  lifetimeHeading: "profile.tokenOverview.lifetime.heading",
+  lifetimeBought: "profile.tokenOverview.lifetime.bought",
+  lifetimeEarned: "profile.tokenOverview.lifetime.earned",
+  lifetimeAllocated: "profile.tokenOverview.lifetime.allocated",
+  lifetimeReclaimed: "profile.tokenOverview.lifetime.reclaimed",
+  lifetimeSpent: "profile.tokenOverview.lifetime.spent",
+  lifetimeReversed: "profile.tokenOverview.lifetime.reversed",
+  statusesHeading: "profile.tokenOverview.statuses.heading",
+  actionsHeading: "profile.tokenOverview.actions.heading",
+  activityHeading: "profile.tokenOverview.activity.heading",
+  activityEmpty: "profile.tokenOverview.activity.empty",
+  activityCredit: "profile.tokenOverview.activity.direction.credit",
+  activityDebit: "profile.tokenOverview.activity.direction.debit",
+  activitySource: "profile.tokenOverview.activity.source",
+  activityStatus: "profile.tokenOverview.activity.status",
+  activityDate: "profile.tokenOverview.activity.date",
+  activityBeneficiary: "profile.tokenOverview.activity.beneficiary",
+  activityReference: "profile.tokenOverview.activity.reference",
+  unavailableUsesHeading: "profile.tokenOverview.unavailableUses.heading",
+  unavailableStatus: "profile.tokenOverview.unavailableUses.status",
+} as const;
+
+export type ProfileSettingsExtensionTranslationKey = LeafValues<
+  typeof profileSettingsExtensionTranslationKeys
+>;
+export type ProfileTokenTranslationKey = LeafValues<
+  typeof profileTokenTranslationKeys
+>;
+export type ProfilePackageTranslationKey =
+  | ProfileTranslationKey
+  | ProfileSettingsExtensionTranslationKey
+  | ProfileTokenTranslationKey;
 
 export type ProfileTranslationResolver = (
   key: ProfileTranslationKey,
+  args?: TranslationArgs
+) => string;
+
+export type ProfilePackageTranslationResolver = (
+  key: ProfilePackageTranslationKey,
+  args?: TranslationArgs
+) => string;
+
+export type ProfileTokenTranslationResolver = (
+  key: ProfileTokenTranslationKey,
   args?: TranslationArgs
 ) => string;
 
@@ -168,10 +207,23 @@ export type ProfileRuntimeTranslator = (
   args?: TranslationArgs
 ) => string;
 
-export { profileEnGbTranslations };
+export {
+  profileEnGbTranslations,
+  profilePackageEnGbTranslations,
+  profileSettingsExtensionEnGbTranslations,
+  profileTokenEnGbTranslations,
+};
 
 export const profileTranslations = {
   "en-GB": profileEnGbTranslations,
+} as const satisfies Partial<Record<string, TranslationDictionary>>;
+
+export const profilePackageTranslations = {
+  "en-GB": profilePackageEnGbTranslations,
+} as const satisfies Partial<Record<string, TranslationDictionary>>;
+
+export const profileTokenTranslations = {
+  "en-GB": profileTokenEnGbTranslations,
 } as const satisfies Partial<Record<string, TranslationDictionary>>;
 
 function renderTranslationValue(
@@ -212,4 +264,52 @@ export function createProfileTranslationResolver(
   translator: ProfileRuntimeTranslator,
 ): ProfileTranslationResolver {
   return (key, args) => resolveProfileTranslation(translator, key, args);
+}
+
+export function getProfilePackageDefaultTranslation(
+  key: ProfilePackageTranslationKey,
+  args: TranslationArgs = {},
+): string {
+  return renderTranslationValue(profilePackageEnGbTranslations[key], args) ?? key;
+}
+
+export function resolveProfilePackageTranslation(
+  translator: ProfileRuntimeTranslator,
+  key: ProfilePackageTranslationKey,
+  args: TranslationArgs = {},
+): string {
+  const translated = translator(key, args);
+  return translated === key
+    ? getProfilePackageDefaultTranslation(key, args)
+    : translated;
+}
+
+export function createProfilePackageTranslationResolver(
+  translator: ProfileRuntimeTranslator,
+): ProfilePackageTranslationResolver {
+  return (key, args) => resolveProfilePackageTranslation(translator, key, args);
+}
+
+export function getProfileTokenDefaultTranslation(
+  key: ProfileTokenTranslationKey,
+  args: TranslationArgs = {},
+): string {
+  return renderTranslationValue(profileTokenEnGbTranslations[key], args) ?? key;
+}
+
+export function resolveProfileTokenTranslation(
+  translator: ProfileRuntimeTranslator,
+  key: ProfileTokenTranslationKey,
+  args: TranslationArgs = {},
+): string {
+  const translated = translator(key, args);
+  return translated === key
+    ? getProfileTokenDefaultTranslation(key, args)
+    : translated;
+}
+
+export function createProfileTokenTranslationResolver(
+  translator: ProfileRuntimeTranslator,
+): ProfileTokenTranslationResolver {
+  return (key, args) => resolveProfileTokenTranslation(translator, key, args);
 }

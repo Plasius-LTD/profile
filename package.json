@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@plasius/auth": "^1.0.20",
-    "@plasius/economy": "^0.3.1",
+    "@plasius/economy": "^0.3.2",
     "@plasius/entity-manager": "^1.0.23",
     "@plasius/environment": "^1.0.20",
     "@plasius/react-query": "^1.0.23",

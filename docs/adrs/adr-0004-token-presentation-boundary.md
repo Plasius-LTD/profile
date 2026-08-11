@@ -38,8 +38,15 @@ Expose `TokenOverviewPanel` and related presentation types from
 - host actions are returned through callbacks rather than executed by the
   package; and
 - the component provides semantic headings, definition/data/time/list markup,
-  visible Credit/Debit words, explicit loading/error/empty states, and a polite
-  refresh live region.
+  visible Credit/Debit words, explicit loading/error/empty states, an explicit
+  no-wallet preview, and a polite refresh live region.
+
+The no-wallet preview is a separate discriminated state rather than a fabricated
+ready wallet. It accepts no balance, lifetime, component, status, action,
+unavailable-use, refresh, or activity props, hard-codes exact zero TokenSubunits
+inside the component, and uses explicit preview copy. Hosts may select it only
+for a deliberately non-economic runtime mode; an authoritative read failure
+must remain an error and must never fall back to this preview.
 
 Also expose pure adapters against the released `@plasius/economy` contracts.
 `createTokenEconomyPresentation` retains the single-wallet boundary.
@@ -60,9 +67,14 @@ runtime. Its prefixed global stylesheet is exposed separately as
 loadable outside a CSS-aware bundler while preserving an explicit, tree-shakable
 style dependency for browser hosts.
 
-Package-owned en-GB translation keys and `createTokenOverviewPanelLabels` supply
-a stable fallback and convenience factory. The `labels` prop remains required,
+Package-owned en-GB translation keys, `createTokenOverviewPanelLabels`, and
+`createTokenOverviewPanelPreviewLabels` supply stable fallbacks and convenience
+factories. The `labels` and preview-state `previewLabels` props remain required,
 so a host deliberately chooses the localized copy used for each render.
+Token keys and resolvers use the additive `profileTokenTranslationKeys`
+namespace rather than expanding the published closed `ProfileTranslationKey`
+union, preserving v1 exhaustive dictionaries while allowing the lazy Token
+entry point to evolve under minor releases.
 
 ## Consequences
 

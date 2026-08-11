@@ -6,9 +6,9 @@ import type {
   WalletPortfolioComponentRole,
 } from "@plasius/economy";
 import {
-  getProfileDefaultTranslation,
-  profileTranslationKeys,
-  type ProfileTranslationResolver,
+  getProfileTokenDefaultTranslation,
+  profileTokenTranslationKeys,
+  type ProfileTokenTranslationResolver,
 } from "../../i18n.js";
 
 const TOKEN_SUBUNITS_PER_TOKEN = 1_000n;
@@ -209,6 +209,14 @@ export interface TokenOverviewPanelLabels {
   unavailableStatus: string;
 }
 
+/** Copy that makes a no-wallet preview distinct from persisted economy data. */
+export interface TokenOverviewPanelPreviewLabels {
+  title: string;
+  description: string;
+  amount: string;
+  activityEmpty: string;
+}
+
 interface TokenOverviewPanelBaseProps {
   labels: TokenOverviewPanelLabels;
   locale?: string;
@@ -232,6 +240,15 @@ export interface TokenOverviewPanelEmptyProps extends TokenOverviewPanelBaseProp
   state: "empty";
 }
 
+/**
+ * A deliberately non-wallet presentation. It accepts no balance, lifetime,
+ * component, activity, status, or action data.
+ */
+export interface TokenOverviewPanelPreviewProps extends TokenOverviewPanelBaseProps {
+  state: "preview";
+  previewLabels: TokenOverviewPanelPreviewLabels;
+}
+
 export interface TokenOverviewPanelReadyProps extends TokenOverviewPanelBaseProps {
   state: "ready";
   balances: TokenBalancePresentation;
@@ -253,13 +270,14 @@ export type TokenOverviewPanelProps =
   | TokenOverviewPanelLoadingProps
   | TokenOverviewPanelErrorProps
   | TokenOverviewPanelEmptyProps
+  | TokenOverviewPanelPreviewProps
   | TokenOverviewPanelReadyProps;
 
 /** Build the required label contract from a host or package translation resolver. */
 export function createTokenOverviewPanelLabels(
-  translate: ProfileTranslationResolver = getProfileDefaultTranslation,
+  translate: ProfileTokenTranslationResolver = getProfileTokenDefaultTranslation,
 ): TokenOverviewPanelLabels {
-  const keys = profileTranslationKeys.tokenOverview;
+  const keys = profileTokenTranslationKeys;
 
   return {
     heading: translate(keys.heading),
@@ -299,6 +317,19 @@ export function createTokenOverviewPanelLabels(
     activityReference: translate(keys.activityReference),
     unavailableUsesHeading: translate(keys.unavailableUsesHeading),
     unavailableStatus: translate(keys.unavailableStatus),
+  };
+}
+
+/** Build truthful package-default copy for the explicit no-wallet preview. */
+export function createTokenOverviewPanelPreviewLabels(
+  translate: ProfileTokenTranslationResolver = getProfileTokenDefaultTranslation,
+): TokenOverviewPanelPreviewLabels {
+  const keys = profileTokenTranslationKeys;
+  return {
+    title: translate(keys.previewTitle),
+    description: translate(keys.previewDescription),
+    amount: translate(keys.previewAmount),
+    activityEmpty: translate(keys.previewActivityEmpty),
   };
 }
 
@@ -522,6 +553,39 @@ export function TokenOverviewPanel(props: TokenOverviewPanelProps) {
             {labels.emptyTitle}
           </SectionHeading>
           <p>{labels.emptyDescription}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (props.state === "preview") {
+    return (
+      <section
+        className={panelClassName}
+        aria-labelledby={panelHeadingId}
+        data-token-presentation="zero-ui-preview"
+      >
+        {panelHeader}
+        <div
+          className={styles.statePanel}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <SectionHeading className={styles.sectionHeading}>
+            {props.previewLabels.title}
+          </SectionHeading>
+          <p>{props.previewLabels.description}</p>
+          <dl className={styles.amountGrid}>
+            <AmountDefinition
+              label={props.previewLabels.amount}
+              amountSubunits="0"
+              formatAmount={formatAmount}
+            />
+          </dl>
+          <p className={styles.emptyActivity}>
+            {props.previewLabels.activityEmpty}
+          </p>
         </div>
       </section>
     );

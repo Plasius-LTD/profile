@@ -36,6 +36,7 @@ import {
   createTokenEconomyPresentation,
   createTokenPortfolioEconomyPresentation,
   createTokenOverviewPanelLabels,
+  createTokenOverviewPanelPreviewLabels,
   profileTranslations,
 } from "@plasius/profile";
 ```
@@ -134,6 +135,11 @@ remove the host-owned Admin editor without changing self-service defaults.
 Package-owned UI copy is exposed as `profileTranslations` and stable
 `profileTranslationKeys` for host applications that use
 `@plasius/translations`.
+Those v1 exports remain closed for exhaustive downstream dictionaries. New
+package UI uses additive `profileSettingsExtensionTranslationKeys` and
+`profileTokenTranslationKeys`; hosts that mount those surfaces can load
+`profilePackageTranslations`, or lazy Token routes can load
+`profileTokenTranslations` from `@plasius/profile/tokens`.
 
 ```tsx
 import { I18nProvider, getTranslator } from "@plasius/translations";
@@ -195,7 +201,7 @@ feature-flag decisions, authoritative API validation, and localized activity
 copy.
 
 `createTokenEconomyPresentation` retains the original single-wallet adapter
-against the released `@plasius/economy` `^0.3.1` wallet-summary,
+against the released `@plasius/economy` `^0.3.2` wallet-summary,
 lifetime-total, and activity contracts. The additive
 `createTokenPortfolioEconomyPresentation` entry point accepts
 `WalletPortfolioSummaryV1`, `WalletPortfolioLifetimeV1`, and discriminated
@@ -225,7 +231,7 @@ per displayed Token without passing the amount through a JavaScript `number`.
 import "@plasius/profile/tokens.css";
 import {
   TokenOverviewPanel,
-  createProfileTranslationResolver,
+  createProfileTokenTranslationResolver,
   createTokenEconomyPresentation,
   createTokenOverviewPanelLabels,
 } from "@plasius/profile/tokens";
@@ -234,7 +240,7 @@ import { useI18n } from "@plasius/translations";
 function WalletSummary() {
   const { t } = useI18n();
   const labels = createTokenOverviewPanelLabels(
-    createProfileTranslationResolver(t),
+    createProfileTokenTranslationResolver(t),
   );
   const presentation = createTokenEconomyPresentation({
     balances: authoritativeWalletSummary,
@@ -298,9 +304,29 @@ ESM and CommonJS JavaScript entrypoints loadable in non-bundler runtimes while
 allowing Vite/Webpack hosts to include the prefixed component styles in the
 lazy route chunk.
 
-The discriminated `state` prop also provides dedicated `loading`, `error`, and
-`empty` presentations. In the ready state, aggregate balances, separated wallet
-components, and lifetime values use semantic lists, description lists, and
+The discriminated `state` prop also provides dedicated `loading`, `error`,
+`empty`, and explicit no-wallet `preview` presentations. The preview state
+accepts `previewLabels` alongside the shared heading, description, locale, and
+styling props, but accepts no wallet, lifetime, component, status, action,
+unavailable-use, refresh, or activity data. It formats an exact zero itself.
+It is suitable only for a host-enforced non-economic preview and must not be
+used as a fallback when an authoritative wallet read fails:
+
+```tsx
+const previewLabels = createTokenOverviewPanelPreviewLabels(
+  createProfileTokenTranslationResolver(t),
+);
+
+<TokenOverviewPanel
+  state="preview"
+  labels={labels}
+  previewLabels={previewLabels}
+/>;
+```
+
+In the ready state,
+aggregate balances, separated wallet components, and lifetime values use
+semantic lists, description lists, and
 `<data>` elements; activity uses an ordered list, semantic `<time>` values, and
 visible Credit/Debit text. Hosts can pass `isRefreshing` and
 `balanceAnnouncement` to update the panel's polite live region, and receive all

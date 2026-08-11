@@ -15,6 +15,7 @@ describe("public package entrypoint", () => {
 
     expect(profile.TokenOverviewPanel).toBeTypeOf("function");
     expect(profile.createTokenOverviewPanelLabels).toBeTypeOf("function");
+    expect(profile.createTokenOverviewPanelPreviewLabels).toBeTypeOf("function");
     expect(profile.createTokenEconomyPresentation).toBeTypeOf("function");
     expect(profile.createTokenPortfolioEconomyPresentation).toBeTypeOf(
       "function",
@@ -26,11 +27,16 @@ describe("public package entrypoint", () => {
     const tokens = await import("../src/tokens.js");
 
     expect(tokens.TokenOverviewPanel).toBeTypeOf("function");
+    expect(tokens.createTokenOverviewPanelPreviewLabels).toBeTypeOf("function");
     expect(tokens.createTokenEconomyPresentation).toBeTypeOf("function");
     expect(tokens.createTokenPortfolioEconomyPresentation).toBeTypeOf(
       "function",
     );
     expect(tokens.createProfileTranslationResolver).toBeTypeOf("function");
+    expect(tokens.createProfileTokenTranslationResolver).toBeTypeOf("function");
+    expect(tokens.profileTokenTranslationKeys.heading).toBe(
+      "profile.tokenOverview.heading",
+    );
   });
 
   it("exports the controlled SettingsPage surface from the root entrypoint", async () => {

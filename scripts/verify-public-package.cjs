@@ -160,6 +160,7 @@ function verifyTokenRuntimeEntrypoints() {
     "TokenOverviewPanel",
     "createTokenEconomyPresentation",
     "createTokenPortfolioEconomyPresentation",
+    "createTokenOverviewPanelPreviewLabels",
     "createProfileTranslationResolver",
   ];
   const assertion = `

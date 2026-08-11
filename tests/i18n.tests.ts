@@ -2,13 +2,39 @@ import { createI18n } from "@plasius/translations";
 import { describe, expect, it } from "vitest";
 import {
   getProfileDefaultTranslation,
+  profilePackageTranslations,
+  profileSettingsExtensionTranslationKeys,
+  profileTokenTranslationKeys,
   profileTranslationKeys,
   profileEnGbTranslations,
   profileTranslations,
   resolveProfileTranslation,
+  type ProfileSettingsExtensionTranslationKey,
+  type ProfileTokenTranslationKey,
+  type ProfileTranslationKey,
 } from "../src/i18n.js";
 
+type ExpectFalse<Value extends false> = Value;
+const stableKeyIncludesSettingsExtensions: ExpectFalse<
+  ProfileSettingsExtensionTranslationKey extends ProfileTranslationKey
+    ? true
+    : false
+> = false;
+const stableKeyIncludesTokenExtensions: ExpectFalse<
+  ProfileTokenTranslationKey extends ProfileTranslationKey ? true : false
+> = false;
+
 describe("profile translations", () => {
+  it("keeps the published v1 translation-key surface closed", () => {
+    expect(stableKeyIncludesSettingsExtensions).toBe(false);
+    expect(stableKeyIncludesTokenExtensions).toBe(false);
+    expect(profileTranslationKeys).not.toHaveProperty("tokenOverview");
+    expect(profileTranslationKeys.settings).not.toHaveProperty("savingSettings");
+    expect(profileSettingsExtensionTranslationKeys.savingSettings).toBe(
+      "profile.settings.action.saving",
+    );
+  });
+
   it("exports package-owned en-GB dictionaries for the shared translator", () => {
     const i18n = createI18n({
       language: "en-GB",
@@ -17,13 +43,19 @@ describe("profile translations", () => {
     });
 
     expect(i18n.t(profileTranslationKeys.settings.heading)).toBe("Profile settings");
-    expect(i18n.t(profileTranslationKeys.tokenOverview.heading)).toBe("Tokens");
-    expect(i18n.t(profileTranslationKeys.tokenOverview.activityCredit)).toBe("Credit");
     expect(
       i18n.t(profileTranslationKeys.avatarUpload.success, {
         fileName: "avatar.png",
       }),
     ).toBe("Avatar uploaded successfully as avatar.png.");
+
+    const packageI18n = createI18n({
+      language: "en-GB",
+      fallback: "en-GB",
+      translations: profilePackageTranslations,
+    });
+    expect(packageI18n.t(profileTokenTranslationKeys.heading)).toBe("Tokens");
+    expect(packageI18n.t(profileTokenTranslationKeys.activityCredit)).toBe("Credit");
   });
 
   it("resolves package defaults when the active translator has not loaded a key", () => {

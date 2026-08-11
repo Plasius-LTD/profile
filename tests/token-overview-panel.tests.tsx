@@ -5,12 +5,35 @@ import { describe, expect, it, vi } from "vitest";
 import {
   TokenOverviewPanel,
   createTokenOverviewPanelLabels,
+  createTokenOverviewPanelPreviewLabels,
   formatTokenSubunits,
   type TokenOverviewPanelLabels,
+  type TokenOverviewPanelProps,
   type TokenOverviewPanelReadyProps,
 } from "../src/components/token-overview-panel/index.js";
 
 const labels = createTokenOverviewPanelLabels();
+const previewLabels = createTokenOverviewPanelPreviewLabels();
+
+type PreviewProps = Extract<TokenOverviewPanelProps, { state: "preview" }>;
+type ExpectFalse<T extends false> = T;
+type PreviewForbiddenProp =
+  | "balances"
+  | "lifetimeTotals"
+  | "activities"
+  | "walletComponents"
+  | "statuses"
+  | "actions"
+  | "unavailableUses"
+  | "isRefreshing"
+  | "balanceAnnouncement"
+  | "onRefresh"
+  | "onAction"
+  | "onActivitySelect"
+  | "onUnavailableUseSelect";
+const previewHasNoReadyOnlyProps: ExpectFalse<
+  Extract<PreviewForbiddenProp, keyof PreviewProps> extends never ? false : true
+> = false;
 
 function createReadyProps(
   overrides: Partial<TokenOverviewPanelReadyProps> = {},
@@ -127,6 +150,19 @@ describe("createTokenOverviewPanelLabels", () => {
       "translated:profile.tokenOverview.unavailableUses.status",
     );
   });
+
+  it("builds explicit host-localizable no-wallet preview copy", () => {
+    const translated = createTokenOverviewPanelPreviewLabels(
+      (key) => `translated:${key}`,
+    );
+
+    expect(translated).toEqual({
+      title: "translated:profile.tokenOverview.preview.title",
+      description: "translated:profile.tokenOverview.preview.description",
+      amount: "translated:profile.tokenOverview.preview.amount",
+      activityEmpty: "translated:profile.tokenOverview.preview.activity.empty",
+    });
+  });
 });
 
 describe("TokenOverviewPanel", () => {
@@ -159,6 +195,34 @@ describe("TokenOverviewPanel", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "No Token wallet to show",
     );
+  });
+
+  it("renders a truthful exact-zero preview without wallet or action claims", () => {
+    expect(previewHasNoReadyOnlyProps).toBe(false);
+    const { container } = render(
+      <TokenOverviewPanel
+        state="preview"
+        labels={labels}
+        previewLabels={previewLabels}
+      />,
+    );
+
+    expect(container.querySelector('[data-token-presentation="zero-ui-preview"]'))
+      .not.toBeNull();
+    const status = screen.getByRole("status");
+    expect(status.textContent).toContain("No Token wallet has been created");
+    expect(status.textContent).toContain(
+      "Tokens cannot yet be earned, bought, allocated, spent, or recorded.",
+    );
+    expect(status.textContent).toContain("0 Tokens");
+    expect(status.textContent).toContain(
+      "No Token activity can be recorded in this preview.",
+    );
+    expect(screen.queryByRole("heading", { name: "Current balances" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Lifetime activity" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Get Tokens" })).toBeNull();
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("uses semantic definitions, data, time, and lists without losing bigint precision", () => {

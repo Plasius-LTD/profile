@@ -6,10 +6,12 @@ import { describe, expect, it } from "vitest";
 import {
   TokenOverviewPanel,
   createTokenOverviewPanelLabels,
+  createTokenOverviewPanelPreviewLabels,
   type TokenOverviewPanelReadyProps,
 } from "../src/components/token-overview-panel/index.js";
 
 const labels = createTokenOverviewPanelLabels();
+const previewLabels = createTokenOverviewPanelPreviewLabels();
 const axeOptions: axe.RunOptions = {
   rules: {
     // jsdom does not implement the canvas APIs axe uses for computed contrast checks.
@@ -161,4 +163,18 @@ describe("TokenOverviewPanel accessibility", () => {
       expect(result.violations).toEqual([]);
     },
   );
+
+  it("has no automated axe violations in the explicit no-wallet preview", async () => {
+    const { container } = render(
+      <TokenOverviewPanel
+        state="preview"
+        labels={labels}
+        previewLabels={previewLabels}
+      />,
+    );
+
+    const result = await axe.run(container, axeOptions);
+
+    expect(result.violations).toEqual([]);
+  });
 });

@@ -15,13 +15,15 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - Added package-owned `en-GB` Token overview translation keys and a label factory that lets hosts supply localized copy explicitly.
   - Added a runtime-validating adapter from released `@plasius/economy` contracts, stable activity filters, and public-entrypoint coverage.
   - Added an explicit portfolio presentation entry point for account-aware `WalletPortfolioSummaryV1`, `WalletPortfolioLifetimeV1`, and economic/workflow `WalletActivityEntryV1` contracts, preserving component roles, beneficiaries, ordering, and exact amounts for task #37.
+  - Added a backward-compatible `TokenOverviewPanel` no-wallet preview state and label factory with exact-zero formatting, explicit non-economic copy, and no balance, lifetime, action, component, or activity inputs for task #37.
 
 - **Changed**
   - `SettingsPage` now provides an accessible named/busy form, 44 px minimum form controls and mutation targets, safe generic async-submit failures, and no longer writes profile PII to the console during legacy validation-only submission.
   - Exported a lazy-loadable `@plasius/profile/tokens` subpath plus explicit `@plasius/profile/tokens.css` stylesheet; both ESM and CommonJS JavaScript entrypoints are runtime-verified without executing CSS, while economy fetching, providers, storage, profile autosave, balance derivation, flags, and authorization remain outside `@plasius/profile`.
   - Expanded the typecheck gate to cover the Token and localization regression tests as well as package source.
-  - Updated the runtime contract dependency to approved `@plasius/economy` `^0.3.1` while retaining the V1 wallet-summary, lifetime-total, and activity presentation boundary.
+  - Updated the runtime contract dependency to approved `@plasius/economy` `^0.3.2` while retaining the V1 wallet-summary, lifetime-total, and activity presentation boundary.
   - Token overview consumers may now render portfolio wallet components as separate, labelled balance groups without changing the existing single-wallet props or adapter.
+  - Kept the published v1 `profileTranslationKeys`, `ProfileTranslationKey`, and default translation helpers source-compatible by exposing new Settings and Token copy through separate extension key sets, dictionaries, resolvers, and the lazy Token entry point.
 
 - **Fixed**
   - Route release preparation through the same configurable trusted self-hosted
