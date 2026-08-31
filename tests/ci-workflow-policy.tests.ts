@@ -40,6 +40,13 @@ describe("workflow trust boundaries", () => {
     expect(ciWorkflow.match(/needs: trusted_head/gu)).toHaveLength(2);
     expect(ciWorkflow.split(isolatedCiRunner)).toHaveLength(3);
     expect(ciWorkflow).not.toContain("runs-on: [self-hosted, Linux, X64]");
+    expect(ciWorkflow.match(/actions\/checkout@v5/gu)).toHaveLength(2);
+    expect(ciWorkflow.match(/actions\/setup-node@v6/gu)).toHaveLength(2);
+    expect(ciWorkflow).toContain(
+      "cache: ${{ github.event_name == 'pull_request' && 'npm' || '' }}",
+    );
+    expect(ciWorkflow.match(/package-manager-cache: false/gu)).toHaveLength(2);
+    expect(ciWorkflow).toContain("timeout-minutes: 30");
   });
 
   it("keeps production release workflows off pull-request triggers", () => {
