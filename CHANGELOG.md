@@ -12,10 +12,14 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
+  - Run trusted push CI and main-only audit validation on explicitly selected
+    quarantined self-hosted runners without a hosted fallback.
   - Refreshed compatible @plasius/* lockfile resolutions to the latest published releases.
  - (placeholder)
 
 - **Fixed**
+  - Confirm release metadata is merged before preparation continues, including
+    accepted-but-pending merges and bounded retry failure cases.
   - Preserved hosted pull-request isolation while disabling package-manager
     cache finalization and bounding self-hosted main validation runtime.
   - (placeholder)
