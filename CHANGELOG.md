@@ -12,6 +12,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [1.0.43] - 2026-09-08
+
+- **Added**
+  - (placeholder)
+
+- **Changed**
   - Run trusted push CI and main-only audit validation on explicitly selected
     quarantined self-hosted runners without a hosted fallback.
   - Refreshed compatible @plasius/* lockfile resolutions to the latest published releases.
@@ -528,7 +542,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.42...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/profile/compare/v1.0.43...HEAD
 
 ## [1.0.0] - 2026-02-11
 
@@ -574,3 +588,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [1.0.40]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.40
 [1.0.41]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.41
 [1.0.42]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.42
+[1.0.43]: https://github.com/Plasius-LTD/profile/releases/tag/v1.0.43
