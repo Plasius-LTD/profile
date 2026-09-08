@@ -7,3 +7,5 @@
 - [ADR-0005: Keep Settings Policies Presentational and Submission Host-Owned](./adr-0005-controlled-settings-boundary.md)
 - [ADR-0006: Exact-main OIDC trusted package publishing](./adr-0006-oidc-trusted-package-publishing.md)
 - [ADR-0007: Profile normalization preserves contract metadata](./adr-0007-preserve-profile-contract-metadata.md)
+
+- [ADR 0008: Trusted CI and confirmed release merges](./adr-0008-trusted-ci-and-confirmed-release-merges.md)

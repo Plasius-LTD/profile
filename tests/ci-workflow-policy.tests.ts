@@ -12,8 +12,6 @@ const npmConfig = readFileSync(new URL("../.npmrc", import.meta.url), "utf8");
 const configurableSelfHostedRunner =
   "runs-on: ${{ fromJSON(vars.CD_RUNNER_LABELS || '[\"self-hosted\",\"Linux\",\"X64\"]') }}";
 const hostedProductionRunner = "runs-on: ubuntu-latest";
-const isolatedCiRunner =
-  "runs-on: ${{ fromJSON(github.event_name == 'pull_request' && '[\"ubuntu-latest\"]' || '[\"self-hosted\",\"Linux\",\"X64\"]') }}";
 const exactCiWorkflowEndpoint =
   'actions/workflows/ci.yml/runs"';
 
@@ -27,26 +25,35 @@ describe("workflow trust boundaries", () => {
     expect(releasePrepareWorkflow).toContain("environment: production");
   });
 
-  it("validates same-repository pull requests without exposing self-hosted runners to forks", () => {
-    expect(ciWorkflow).not.toContain("pull_request_target:");
-    expect(ciWorkflow).toMatch(/pull_request:\s*\n\s+branches: \[main\]/u);
-    expect(
-      ciWorkflow.match(
-        /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/gu,
-      ),
-    ).toHaveLength(2);
+  it("runs every CI job only on trusted repository pushes and explicit self-hosted labels", () => {
+    expect(ciWorkflow).toMatch(/push:\s*\n\s+branches: \["\*\*"\]/u);
+    expect(ciWorkflow).not.toMatch(/\n\s+pull_request(?:_target)?:/u);
+    expect(ciWorkflow).not.toContain("ubuntu-latest");
+    expect(ciWorkflow).not.toContain("fromJSON");
+    expect(ciWorkflow.match(/labels: \[self-hosted, Linux, X64\]/gu)).toHaveLength(3);
+    expect(ciWorkflow.match(/group: Public CI - Quarantined/gu)).toHaveLength(3);
+    expect(ciWorkflow.match(/if: \$\{\{ github.event_name == 'push' \}\}/gu)).toHaveLength(3);
     expect(ciWorkflow).toContain("name: Trusted head admission");
-    expect(ciWorkflow).toContain("runs-on: ubuntu-latest");
+    expect(ciWorkflow).toContain("name: Public artifact integrity");
     expect(ciWorkflow.match(/needs: trusted_head/gu)).toHaveLength(2);
-    expect(ciWorkflow.split(isolatedCiRunner)).toHaveLength(3);
-    expect(ciWorkflow).not.toContain("runs-on: [self-hosted, Linux, X64]");
     expect(ciWorkflow.match(/actions\/checkout@v5/gu)).toHaveLength(2);
     expect(ciWorkflow.match(/actions\/setup-node@v6/gu)).toHaveLength(2);
-    expect(ciWorkflow).toContain(
-      "cache: ${{ github.event_name == 'pull_request' && 'npm' || '' }}",
-    );
     expect(ciWorkflow.match(/package-manager-cache: false/gu)).toHaveLength(2);
+    expect(ciWorkflow).not.toMatch(/\n\s+cache:/u);
     expect(ciWorkflow).toContain("timeout-minutes: 30");
+  });
+
+  it("confines scheduled dependency validation to main and approved self-hosted capacity", () => {
+    const auditWorkflow = readWorkflow("npm-audit-fix");
+    expect(auditWorkflow).toContain("if: ${{ github.ref == 'refs/heads/main' }}");
+    expect(auditWorkflow).toContain("group: Public CI - Quarantined");
+    expect(auditWorkflow).toContain("labels: [self-hosted, Linux, X64]");
+    expect(auditWorkflow).toContain("timeout-minutes: 30");
+    expect(auditWorkflow).toContain("package-manager-cache: false");
+    expect(auditWorkflow).toContain("run: npm ci");
+    expect(auditWorkflow).not.toContain("ubuntu-latest");
+    expect(auditWorkflow).not.toContain("fromJSON");
+    expect(auditWorkflow).not.toMatch(/\n\s+pull_request(?:_target)?:/u);
   });
 
   it("keeps production release workflows off pull-request triggers", () => {

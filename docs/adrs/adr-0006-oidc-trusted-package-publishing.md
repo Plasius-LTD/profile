@@ -19,10 +19,9 @@ main SHA. Publication is dispatched from that SHA, builds an immutable package
 tarball and SBOM in a read-only job, then hands their IDs and digests to a
 dependency-free `production` job.
 
-Pull-request CI uses GitHub-hosted runners after a same-repository trusted-head
-admission. Only protected `main` CI may use the workflow-restricted self-hosted
-pool, so validating a repository-owned PR does not require temporarily widening
-the organisation runner boundary.
+CI scheduling is superseded by ADR 0008: trusted repository pushes use explicit
+self-hosted labels in the quarantined group, with reviewed and locked branch
+admission. The hosted production OIDC publication decision below remains active.
 
 The publication job uses npm's GitHub Actions trusted publisher bound to
 `Plasius-LTD/profile`, `cd.yml`, and environment `production`. It publishes the

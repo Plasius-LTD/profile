@@ -339,12 +339,17 @@ MIT
 
 CI keeps the administrative contributor registry outside Git and npm package
 artifacts using exact, case-normalised path checks. Same-repository pull
-requests run on GitHub-hosted runners after an explicit trusted-head admission;
-protected `main` CI continues on approved self-hosted runners. Release
+requests receive checks from reviewed repository-owned branch pushes. Every CI
+job uses explicit `[self-hosted, Linux, X64]` labels in `Public CI - Quarantined`,
+with no PR trigger or hosted fallback. Lock reviewed branch heads before
+admitting their exact workflow refs, then remove temporary admission after merge.
+The monthly audit runs only on `main` in the same group. Release
 preparation and npm publication use GitHub-hosted runners with Node.js 24.18.0
 LTS. Release preparation lands metadata through a protected-branch pull
 request; a second workflow run publishes only from that exact main commit after
-successful exact-SHA CI. npm receives the sealed local tarball through its
+successful exact-SHA CI. Release preparation observes `MERGED` after every merge
+request and fails closed on unreadable state, closure or timeout. npm receives
+the sealed local tarball through its
 `production`-bound OIDC trusted publisher, with provenance and registry
 integrity verification and no long-lived write token. Rollback is to disable
 `cd.yml`; it never restores the retired token or contributor path.
