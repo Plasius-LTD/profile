@@ -33,15 +33,15 @@
     "react": "^19"
   },
   "dependencies": {
-    "@plasius/auth": "^1.1.4",
-    "@plasius/economy": "^0.11.3",
-    "@plasius/entity-manager": "^1.2.4",
-    "@plasius/environment": "^1.0.21",
-    "@plasius/react-query": "^1.0.24",
-    "@plasius/react-state": "^1.2.19",
-    "@plasius/schema": "^1.4.4",
-    "@plasius/sharedcomponents": "^1.2.3",
-    "@plasius/translations": "^1.0.24"
+    "@plasius/auth": "^1.1.5",
+    "@plasius/economy": "^0.11.4",
+    "@plasius/entity-manager": "^1.2.5",
+    "@plasius/environment": "^1.0.22",
+    "@plasius/react-query": "^1.0.25",
+    "@plasius/react-state": "^1.2.20",
+    "@plasius/schema": "^1.4.5",
+    "@plasius/sharedcomponents": "^1.2.4",
+    "@plasius/translations": "^1.0.25"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
