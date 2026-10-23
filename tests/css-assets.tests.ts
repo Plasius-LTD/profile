@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync,
+  chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -30,10 +30,7 @@ function fixture() {
   const dir = mkdtempSync(join(tmpdir(), "profile-css-"));
   fixtures.push(dir);
   put(dir, "package.json", JSON.stringify(metadata));
-  mkdirSync(join(dir, "scripts"));
-  for (const name of readdirSync(join(root, "scripts"))) {
-    symlinkSync(join(root, "scripts", name), join(dir, "scripts", name));
-  }
+  symlinkSync(join(root, "scripts"), join(dir, "scripts"), "junction");
   for (const asset of assets) put(dir, `src/${asset}`, `/* ${asset} */\n.test { color: red; }\n`);
   // The compiler is isolated: these tests exercise the actual npm build chain
   // and copier, while the full suite separately checks real TypeScript output.
@@ -111,9 +108,34 @@ describe("CSS build and package integrity", () => {
     expect(run(dir, "build:cjs").status).not.toBe(0);
   });
 
+  it("rejects a directory in place of required CSS", () => {
+    const dir = fixture();
+    rmSync(join(dir, "src", assets[0]!));
+    mkdirSync(join(dir, "src", assets[0]!));
+    expect(run(dir, "build").status).not.toBe(0);
+  });
+
   it("accepts a complete package", () => {
     const result = run(packedFixture(), "pack:check");
     expect(result.status, result.stderr).toBe(0);
+  });
+
+  for (const output of outputs) {
+    it(`rejects orphan CSS in ${output} after its source is removed`, () => {
+      const dir = packedFixture();
+      put(dir, `${output}/removed.css`, ".removed {}");
+      expect(run(dir, "pack:check").status).not.toBe(0);
+    });
+  }
+
+  it("rejects the old path after an additional stylesheet is renamed and rebuilt", () => {
+    const dir = packedFixture();
+    put(dir, "src/old.css", ".old {}");
+    expect(run(dir, "build").status).toBe(0);
+    rmSync(join(dir, "src/old.css"));
+    put(dir, "src/new.css", ".new {}");
+    expect(run(dir, "build").status).toBe(0);
+    expect(run(dir, "pack:check").status).not.toBe(0);
   });
 
   for (const output of outputs) {

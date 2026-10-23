@@ -321,7 +321,9 @@ Builds require all shipped CSS sources and copy every `src/**/*.css` file into
 both `dist/` and `dist-cjs/` using Node.js, preserving paths and bytes. Compiler
 or copy errors stop the build, including when stale output is present.
 `npm run pack:check` checks both outputs against their CSS sources and verifies
-every CSS asset is in the dry-run npm tarball. CI and read-only release
+the exact CSS inventory is in the dry-run npm tarball. Orphan CSS left after a
+source rename or deletion fails verification; clean and rebuild the outputs.
+CI and read-only release
 validation run this check before publication. Rebuild missing output; restore
 missing source files rather than bypassing the checks.
 

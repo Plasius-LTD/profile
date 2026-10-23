@@ -17,7 +17,11 @@ sources and discover all additional CSS files. Copy source-relative paths to
 both output formats and verify exact bytes. Propagate compiler, source-read,
 directory and copy failures through the existing blocking npm build chains.
 The package verifier requires byte-identical built CSS and dry-run tarball
-membership for every source stylesheet. CI invokes package verification after
+membership for every source stylesheet, rejecting orphaned output/package CSS
+after source deletion or renaming. Read/check CSS through one file descriptor
+instead of checking a pathname then reopening it. Keep the existing shell-based
+npm invocation so Windows npm.cmd resolution continues to work.
+CI invokes package verification after
 build; existing read-only CD validation already does so before sealing output.
 
 Existing shared packages provide runtime UI components rather than a build

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-const { execFileSync } = require("node:child_process");
+const { execFileSync, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { verifyCssAssets } = require("./copy-css-assets.cjs");
 
 function main() {
   const cacheDir = path.resolve(process.cwd(), ".npm-cache", "packcheck");
-  const output = execFileSync(
-    "npm", ["pack", "--dry-run", "--json", "--ignore-scripts", "--cache", cacheDir],
+  const output = execSync(
+    `npm pack --dry-run --json --ignore-scripts --cache "${cacheDir}"`,
     {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
