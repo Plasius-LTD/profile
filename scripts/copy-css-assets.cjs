@@ -66,12 +66,16 @@ function copyCssAssets(root, output) {
     const target = path.join(root, output, asset);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const bytes = regularBytes(path.join(root, "src", asset));
-    const fd = fs.openSync(target, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | (fs.constants.O_NOFOLLOW || 0) | fs.constants.O_NONBLOCK);
+    // Stage a new file beside the destination. Rename replaces a destination
+    // link itself, including on platforms without O_NOFOLLOW, never its target.
+    const staging = fs.mkdtempSync(path.join(path.dirname(target), ".css-"));
+    const stagedFile = path.join(staging, "asset.css");
     try {
-      if (!fs.fstatSync(fd).isFile()) throw new Error(`CSS destination is not a regular file: ${output}/${asset}`);
-      fs.writeFileSync(fd, bytes);
+      fs.writeFileSync(stagedFile, bytes, { flag: "wx" });
+      if (!regularBytes(stagedFile).equals(bytes)) throw new Error(`CSS staging verification failed: ${output}/${asset}`);
+      fs.renameSync(stagedFile, target);
     } finally {
-      fs.closeSync(fd);
+      fs.rmSync(staging, { recursive: true, force: true });
     }
     if (!regularBytes(target).equals(bytes)) {
       throw new Error(`CSS copy verification failed: ${output}/${asset}`);

@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
 import {
   chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -96,6 +98,14 @@ describe("CSS build and package integrity", () => {
     });
   }
 
+  it("cleans owned staging after destination replacement fails", () => {
+    const dir = fixture();
+    const target = join(dir, "dist", assets[0]!);
+    mkdirSync(target, { recursive: true });
+    expect(run(dir, "build").status).not.toBe(0);
+    expect(fs.readdirSync(dirname(target)).filter(name => name.startsWith(".css-"))).toEqual([]);
+  });
+
   for (const script of ["build", "build:cjs"]) {
     it(`${script} propagates a compiler failure`, () => {
       expect(run(fixture(), script, { CSS_TEST_TSC_EXIT: "17" }).status).not.toBe(0);
@@ -114,6 +124,27 @@ describe("CSS build and package integrity", () => {
     mkdirSync(join(dir, "src", assets[0]!));
     expect(run(dir, "build").status).not.toBe(0);
   });
+
+  for (const output of outputs) {
+    it(`replaces a linked ${output} CSS entry without truncating its target when O_NOFOLLOW is unavailable`, () => {
+      const dir = packedFixture();
+      const asset = assets[0]!;
+      put(dir, "canary.css", "must remain untouched");
+      rmSync(join(dir, output, asset));
+      symlinkSync(join(dir, "canary.css"), join(dir, output, asset));
+      const isolatedModule = { exports: {} as { copyCssAssets: (root: string, output: string) => void } };
+      runInNewContext(readFileSync(join(root, "scripts/copy-css-assets.cjs"), "utf8"), {
+        module: isolatedModule,
+        require: (id: string) => id === "node:fs"
+          ? { ...fs, constants: { ...fs.constants, O_NOFOLLOW: 0 } }
+          : id === "node:path" ? { join, dirname, posix: { join } } : undefined,
+      }, { filename: join(root, "scripts/copy-css-assets.cjs") });
+      isolatedModule.exports.copyCssAssets(dir, output);
+      expect(readFileSync(join(dir, "canary.css"), "utf8")).toBe("must remain untouched");
+      expect(readFileSync(join(dir, output, asset))).toEqual(readFileSync(join(dir, "src", asset)));
+      expect(fs.lstatSync(join(dir, output, asset)).isSymbolicLink()).toBe(false);
+    });
+  }
 
   it("accepts a complete package", () => {
     const result = run(packedFixture(), "pack:check");

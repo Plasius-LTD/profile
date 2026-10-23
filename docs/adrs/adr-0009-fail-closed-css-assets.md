@@ -21,6 +21,10 @@ membership for every source stylesheet, rejecting orphaned output/package CSS
 after source deletion or renaming. Read/check CSS through one file descriptor
 instead of checking a pathname then reopening it. Keep the existing shell-based
 npm invocation so Windows npm.cmd resolution continues to work.
+Write a new temporary file beside each destination and rename it into place;
+this replaces destination links without following or truncating their targets,
+including on platforms without `O_NOFOLLOW`. Clean only the owned staging
+directory after success or failure.
 CI invokes package verification after
 build; existing read-only CD validation already does so before sealing output.
 
