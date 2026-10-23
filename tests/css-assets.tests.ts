@@ -5,6 +5,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
@@ -36,14 +37,21 @@ function fixture() {
   for (const asset of assets) put(dir, `src/${asset}`, `/* ${asset} */\n.test { color: red; }\n`);
   // The compiler is isolated: these tests exercise the actual npm build chain
   // and copier, while the full suite separately checks real TypeScript output.
-  put(dir, "node_modules/.bin/tsc", `#!${process.execPath}\nprocess.exit(Number(process.env.CSS_TEST_TSC_EXIT || 0));\n`);
+  put(dir, "compiler.cjs", "process.exit(Number(process.env.CSS_TEST_TSC_EXIT || 0));\n");
+  put(dir, "node_modules/.bin/tsc", `#!${process.execPath}\nrequire(${JSON.stringify(join(dir, "compiler.cjs"))});\n`);
+  put(dir, "node_modules/.bin/tsc.cmd", `@echo off\r\n"${process.execPath}" "${join(dir, "compiler.cjs")}" %*\r\n`);
   chmodSync(join(dir, "node_modules/.bin/tsc"), 0o755);
   return dir;
 }
 
 function run(dir: string, script: string, extraEnv: Record<string, string> = {}) {
-  const result = spawnSync("npm", ["run", script], {
+  // npm scripts expose their JS CLI path. Execute it through Node rather than
+  // asking execFile to run Windows' npm.cmd. Direct Vitest runs retain a shell
+  // fallback on Windows, where command scripts need cmd.exe resolution.
+  const npmCli = process.env.npm_execpath;
+  const result = spawnSync(npmCli ? process.execPath : "npm", [...(npmCli ? [npmCli] : []), "run", script], {
     cwd: dir, encoding: "utf8", timeout: 15000,
+    shell: !npmCli && process.platform === "win32",
     env: { ...process.env, npm_config_cache: join(dir, ".npm-cache"), ...extraEnv },
   });
   expect(result.error).toBeUndefined();
@@ -131,13 +139,16 @@ describe("CSS build and package integrity", () => {
       const asset = assets[0]!;
       put(dir, "canary.css", "must remain untouched");
       rmSync(join(dir, output, asset));
-      symlinkSync(join(dir, "canary.css"), join(dir, output, asset));
+      // Ordinary hard links on Windows exercise the same truncation hazard
+      // without requiring developer mode or symlink privileges.
+      if (process.platform === "win32") fs.linkSync(join(dir, "canary.css"), join(dir, output, asset));
+      else symlinkSync(join(dir, "canary.css"), join(dir, output, asset));
       const isolatedModule = { exports: {} as { copyCssAssets: (root: string, output: string) => void } };
       runInNewContext(readFileSync(join(root, "scripts/copy-css-assets.cjs"), "utf8"), {
         module: isolatedModule,
         require: (id: string) => id === "node:fs"
           ? { ...fs, constants: { ...fs.constants, O_NOFOLLOW: 0 } }
-          : id === "node:path" ? { join, dirname, posix: { join } } : undefined,
+          : id === "node:path" ? path : undefined,
       }, { filename: join(root, "scripts/copy-css-assets.cjs") });
       isolatedModule.exports.copyCssAssets(dir, output);
       expect(readFileSync(join(dir, "canary.css"), "utf8")).toBe("must remain untouched");
