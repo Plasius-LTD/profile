@@ -317,6 +317,14 @@ the flag or capability and never mutates economy state.
 
 ## Development
 
+Builds require all shipped CSS sources and copy every `src/**/*.css` file into
+both `dist/` and `dist-cjs/` using Node.js, preserving paths and bytes. Compiler
+or copy errors stop the build, including when stale output is present.
+`npm run pack:check` checks both outputs against their CSS sources and verifies
+every CSS asset is in the dry-run npm tarball. CI and read-only release
+validation run this check before publication. Rebuild missing output; restore
+missing source files rather than bypassing the checks.
+
 ```bash
 npm ci
 npm run build

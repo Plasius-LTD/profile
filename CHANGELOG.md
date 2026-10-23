@@ -15,7 +15,9 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Fail builds on missing CSS sources, compiler errors, or asset-copy failures
+    in either module format. Package validation checks every source CSS file
+    against both outputs and the npm tarball; CI now runs that check after build.
 
 - **Security**
   - (placeholder)
