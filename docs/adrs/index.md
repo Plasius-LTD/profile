@@ -9,3 +9,4 @@
 - [ADR-0007: Profile normalization preserves contract metadata](./adr-0007-preserve-profile-contract-metadata.md)
 
 - [ADR 0008: Trusted CI and confirmed release merges](./adr-0008-trusted-ci-and-confirmed-release-merges.md)
+- [ADR 0009: Fail-closed CSS build and package validation](./adr-0009-fail-closed-css-assets.md)

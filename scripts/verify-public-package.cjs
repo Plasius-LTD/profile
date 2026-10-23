@@ -2,6 +2,7 @@
 const { execFileSync, execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { verifyCssAssets } = require("./copy-css-assets.cjs");
 
 function main() {
   const cacheDir = path.resolve(process.cwd(), ".npm-cache", "packcheck");
@@ -16,6 +17,7 @@ function main() {
   const parsed = parseNpmPackJson(output);
   const files = Array.isArray(parsed) && parsed[0]?.files ? parsed[0].files : [];
   const paths = files.map((entry) => entry.path);
+  verifyCssAssets(process.cwd(), paths);
 
   verifyCjsMetadata();
   verifyTokenSubpathMetadata();
